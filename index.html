@@ -992,16 +992,38 @@ addEventListener('hashchange', paintAdmin);
 
 /* ═══ storage ═════════════════════════════════════════ */
 const OLDKEY = 'tapline.project', LIBKEY = 'tapline.scenes', BAKKEY = 'tapline.backups';
+/* Every write goes to BOTH backends and every read consults BOTH, because
+   the two can legitimately disagree: window.storage may be injected only on
+   some loads, so a library written to localStorage earlier is invisible to a
+   window.storage-only read. Returning null there reads as "nothing saved",
+   and boot would then seed a fresh library straight over the real one.
+   read() reports *why* it came back empty so callers can tell a genuine
+   empty store from a backend that simply failed — never destroy data on the
+   strength of a read that errored. */
 const store = {
-  async get(k) {
-    try { if (window.storage) { const r = await window.storage.get(k, false); return r ? JSON.parse(r.value) : null; } } catch (e) {}
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) {}
-    return null;
+  async read(k) {
+    let hit = null, failed = false, missing = 0;
+    if (window.storage) {
+      try {
+        const r = await window.storage.get(k, false);
+        if (r && r.value) hit = JSON.parse(r.value); else missing++;
+      } catch (e) { failed = true; }
+    } else missing++;
+    try {
+      const v = localStorage.getItem(k);
+      if (v) { const parsed = JSON.parse(v); if (!hit) hit = parsed; } else missing++;
+    } catch (e) { failed = true; }
+    return { value: hit, failed, empty: !hit && !failed && missing >= 2 };
   },
+  async get(k) { return (await store.read(k)).value; },
   async set(k, obj) {
     const v = JSON.stringify(obj);
-    try { if (window.storage) { await window.storage.set(k, v, false); return; } } catch (e) {}
-    try { localStorage.setItem(k, v); } catch (e) {}
+    let ok = false;
+    try { localStorage.setItem(k, v); ok = true; } catch (e) {}
+    if (window.storage) {
+      try { await window.storage.set(k, v, false); ok = true; } catch (e) {}
+    }
+    return ok;
   }
 };
 
@@ -1085,7 +1107,11 @@ function save() {
   const sc = curScene();
   if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
   clearTimeout(saveT);
-  saveT = setTimeout(() => { store.set(LIBKEY, lib); syncSoon(); maybeSnapshot(); }, 400);
+  saveT = setTimeout(async () => {
+    const ok = await store.set(LIBKEY, lib);
+    if (!ok) toast('SAVE FAILED — export this scene from the menu now');
+    syncSoon(); maybeSnapshot();
+  }, 400);
   paintSceneName();
 }
 /* a tablet backgrounding the page can suspend or reload it before the 400ms
@@ -1101,12 +1127,19 @@ function flushSave() {
 }
 /* a rolling, purely-local set of full snapshots — independent of Drive sync —
    so a bad merge or a corrupted write to LIBKEY is still recoverable */
+const libWeight = l => (l && l.scenes || []).reduce((n, s) => n + ((s.data && s.data.markers || []).length), 0);
 let lastSnapshotAt = 0;
 async function maybeSnapshot() {
   const now = Date.now();
   if (now - lastSnapshotAt < 60000) return;
-  lastSnapshotAt = now;
+  if (!lib.scenes.length) return;
   const backups = (await store.get(BAKKEY)) || [];
+  /* a wipe is exactly what backups exist to undo, so it must never be able to
+     roll the good ones out of the ring — refuse to snapshot a library that
+     lost cuts against the newest backup until it has been rebuilt past it */
+  const last = backups[backups.length - 1];
+  if (last && libWeight(lib) < libWeight(last.lib)) return;
+  lastSnapshotAt = now;
   backups.push({ ts: now, lib: JSON.parse(JSON.stringify(lib)) });
   while (backups.length > 8) backups.shift();
   store.set(BAKKEY, backups);
@@ -2936,15 +2969,35 @@ addEventListener('resize', syncTopbar);
   paintAdmin();
   sizeCanvas(); rafId = requestAnimationFrame(frame);
 
-  const stored = await store.get(LIBKEY);
+  const read = await store.read(LIBKEY);
+  const stored = read.value;
   if (stored && Array.isArray(stored.scenes) && stored.scenes.length) lib = stored;
   else {
-    const old = await store.get(OLDKEY);          /* carry a pre-scenes breakdown across */
-    let sc;
-    if (old && old.markers && old.markers.length) { sc = blankScene('Scene 1'); sc.data = migrate(old); sc.name = old.audioName || 'Scene 1'; }
-    else sc = tutorialScene();                     /* brand-new install — start with the guided walkthrough */
-    lib = { current: sc.id, scenes: [sc] };
-    store.set(LIBKEY, lib);
+    /* Nothing usable came back. Before assuming this is a fresh install and
+       seeding a library, exhaust every other copy — a backup snapshot is
+       real work and must outrank the tutorial. Seeding writes over LIBKEY,
+       so getting this wrong destroys the very data we failed to read. */
+    const backups = (await store.get(BAKKEY)) || [];
+    const recoverable = backups.filter(b => b && b.lib && Array.isArray(b.lib.scenes) && b.lib.scenes.length);
+    const last = recoverable[recoverable.length - 1];
+    if (last) {
+      lib = JSON.parse(JSON.stringify(last.lib));
+      store.set(LIBKEY, lib);
+      setTimeout(() => toast('recovered your scenes from the backup taken ' + fmtWhen(last.ts)), 600);
+    } else if (read.failed) {
+      /* storage itself misbehaved rather than being empty — run from memory
+         and write nothing, so a later good read can still find the data */
+      lib = { current: null, scenes: [] };
+      const sc = blankScene('Scene 1'); lib.scenes.push(sc); lib.current = sc.id;
+      setTimeout(() => toast("couldn't read saved scenes — not overwriting them"), 600);
+    } else {
+      const old = await store.get(OLDKEY);          /* carry a pre-scenes breakdown across */
+      let sc;
+      if (old && old.markers && old.markers.length) { sc = blankScene('Scene 1'); sc.data = migrate(old); sc.name = old.audioName || 'Scene 1'; }
+      else sc = tutorialScene();                     /* brand-new install — start with the guided walkthrough */
+      lib = { current: sc.id, scenes: [sc] };
+      store.set(LIBKEY, lib);
+    }
   }
   if (!curScene() || curScene().deleted) lib.current = (visibleScenes()[0] || lib.scenes[0]).id;
 
