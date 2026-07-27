@@ -694,7 +694,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <button id="menuBtn">⋯</button>
   <div class="drop">
     <button id="addMarkBtn" class="edit-only">Add cut at playhead<kbd>⇧M</kbd></button>
-    <button id="retakeBtn" class="edit-only">Retake cuts</button>
     <hr class="edit-only">
     <button id="loadBtn">Load audio</button>
     <hr>
@@ -746,6 +745,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span id="posLabel">0:00 / 0:00</span>
     <button id="syncBtn" title="Sync with Drive"><i></i><span id="syncLbl">sync off</span></button>
     <button id="sceneBtn" title="Scenes"><b id="sceneName">Scene 1</b><span>▸</span></button>
+    <button class="btn ghost" id="retakeBtn" title="Record a new set of cuts — your notes stay put">↻ Retake</button>
     <span id="audioName"></span>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
@@ -1411,7 +1411,7 @@ function renderScenes() {
     if (isCur) { const tag = el('span', 'curtag'); tag.textContent = 'current'; openArea.appendChild(tag); }
     const nmInput = el('input', 'sc-nmedit'); nmInput.value = sc.name;
     openArea.appendChild(nmInput);
-    openArea.onclick = () => { if (!card.classList.contains('editing') && !isCur) { loadScene(sc); renderScenes(); } };
+    openArea.onclick = () => { if (!card.classList.contains('editing')) { loadScene(sc); renderScenes(); } };
 
     const commitRename = () => {
       const v = nmInput.value.trim();
@@ -1469,11 +1469,9 @@ function renderScenes() {
     cloud.appendChild(document.createTextNode(!drv.on ? 'on this device' : (sc.updated || 0) > drv.last ? 'unsynced changes' : 'synced'));
 
     const cta = el('div', 'sc-cta');
-    if (!isCur) {
-      const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open';
-      openBtn.onclick = e => { e.stopPropagation(); loadScene(sc); renderScenes(); };
-      cta.appendChild(openBtn);
-    }
+    const openBtn = el('button', 'sc-btn open'); openBtn.textContent = isCur ? 'Continue' : 'Open';
+    openBtn.onclick = e => { e.stopPropagation(); loadScene(sc); renderScenes(); };
+    cta.appendChild(openBtn);
     if (visibleScenes().length > 1) {
       const delBtn = el('button', 'sc-btn del'); delBtn.textContent = 'Delete';
       delBtn.onclick = function (e) {
@@ -1527,7 +1525,7 @@ $('#capBack').onclick = cancelCapture;
 $('#mKeys').onclick = () => $('#keys').classList.add('on');
 $('#keysClose').onclick = () => $('#keys').classList.remove('on');
 $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.remove('on'); };
-$('#libBack').onclick = () => go('home');
+$('#libBack').onclick = () => go(P.markers.length ? 'edit' : 'home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id;
