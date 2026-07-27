@@ -639,6 +639,45 @@ body.admin-mode #syncBtn{display:flex}
 @media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
 
+/* ── send: the whole phone/walkman flow in one screen ── */
+.send-in{max-width:520px;margin:0 auto;padding:min(9vh,64px) 22px 48px;display:flex;flex-direction:column;gap:18px}
+.sd-card{
+  border:1px solid var(--line2);border-radius:18px;padding:26px 22px;text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+}
+.sd-big{font-family:var(--mono);font-size:clamp(46px,17vw,72px);line-height:1;color:var(--text);font-weight:400}
+.sd-lbl{font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin-top:10px}
+.sd-len{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:14px}
+.sd-name{
+  width:100%;padding:14px 14px;border-radius:11px;border:1px solid var(--line2);
+  background:rgba(0,0,0,.3);color:var(--text);font-family:var(--txt);font-size:16px;font-weight:600;
+}
+.sd-name::placeholder{color:var(--faint);font-weight:400}
+.sd-acts{display:flex;flex-direction:column;gap:9px}
+.sd-btn{
+  width:100%;padding:17px 16px;border-radius:13px;font-family:var(--ui);font-size:13px;font-weight:600;
+  letter-spacing:.06em;border:1px solid var(--line2);color:var(--dim);background:rgba(255,255,255,.04);
+  transition:.15s;
+}
+.sd-btn:hover{color:var(--text);border-color:var(--dim)}
+.sd-btn.go{background:var(--cut);border-color:var(--cut);color:var(--ink);font-weight:700;font-size:14px}
+.sd-btn.go:hover{filter:brightness(1.08)}
+.sd-btn.go[disabled]{opacity:.45;pointer-events:none}
+.sd-btn.sent{background:rgba(143,201,160,.16);border-color:var(--t3);color:var(--t3)}
+.sd-state{
+  text-align:center;font-family:var(--ui);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);min-height:15px;
+}
+.sd-state.ok{color:var(--t3)}
+.sd-state.err{color:var(--play)}
+.sd-more{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.sd-more button{
+  font-family:var(--ui);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+  padding:10px 12px;border-radius:8px;border:1px solid transparent;
+}
+.sd-more button:hover{color:var(--dim);border-color:var(--line)}
+body.screen-send #top{display:flex}
+
 /* ── inbox: what arrived, in plain language ─────────── */
 .inbox-in{max-width:760px;margin:0 auto;padding:min(9vh,70px) 24px 60px}
 .ib-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
@@ -792,6 +831,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="mCopy">Copy as text</button>
     <button id="mCsv">Export .csv</button>
     <hr>
+    <button id="mCompact">Compact capture: off</button>
     <button id="mLogs">Sync log</button>
     <button id="mRestore">Restore backup<span id="mRestoreWhen"></span></button>
     <hr>
@@ -1003,6 +1043,27 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 </div>
 
+<div id="send" class="page">
+  <div class="send-in">
+    <span class="eyebrow">02 — hand it over</span>
+    <div class="sd-card">
+      <div class="sd-big" id="sdCount">0</div>
+      <div class="sd-lbl">cuts captured</div>
+      <div class="sd-len" id="sdLen">—</div>
+    </div>
+    <input id="sdName" class="sd-name" placeholder="name this one…" autocomplete="off">
+    <div class="sd-acts">
+      <button class="sd-btn go" id="sdSend">Send to Drive</button>
+      <button class="sd-btn" id="sdAgain">Record again</button>
+    </div>
+    <div class="sd-state" id="sdState"></div>
+    <div class="sd-more">
+      <button id="sdEditor">Open full editor</button>
+      <button id="sdHome">Home</button>
+    </div>
+  </div>
+</div>
+
 <div id="inbox" class="page">
   <div class="inbox-in">
     <div class="ib-head">
@@ -1170,6 +1231,71 @@ $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
 };
+
+/* ═══ compact capture — phone, walkman, anything small ═════════════════
+   On a small screen the timeline editor is unusable, but capturing cuts
+   only ever needed one big tap target. So on those devices finishing a
+   capture lands on a hand-off screen — count, name, send — instead of the
+   editor. Nothing is removed: the full editor is one tap away, and the
+   scene is an ordinary scene that any other device can pick up. */
+const CMPKEY = 'tapline.compact';
+let compactPref = null;                 /* null = auto, true/false = user's choice */
+try { const v = localStorage.getItem(CMPKEY); if (v === '0' || v === '1') compactPref = v === '1'; } catch (e) {}
+const smallScreen = () => Math.min(innerWidth, innerHeight) <= 500 || innerWidth <= 620;
+const isCompact = () => compactPref === null ? smallScreen() : compactPref;
+function setCompact(v) {
+  compactPref = v;
+  try { localStorage.setItem(CMPKEY, v ? '1' : '0'); } catch (e) {}
+  paintCompactMenu();
+  toast(v ? 'compact capture on' : 'full editor mode');
+}
+/* where "get back to work" lands: the editor normally, the hand-off screen
+   on a device too small to use it (the editor stays one tap away) */
+const workScreen = () => isCompact() ? 'send' : 'edit';
+function paintCompactMenu() {
+  const b = $('#mCompact'); if (!b) return;
+  b.textContent = isCompact() ? 'Compact capture: on' : 'Compact capture: off';
+}
+
+function paintSend() {
+  const cuts = (P.markers || []).length;
+  $('#sdCount').textContent = cuts;
+  $('#sdLen').textContent = cuts ? 'about ' + fmt(P.duration) + ' long' : 'nothing captured yet';
+  const sc = curScene();
+  $('#sdName').value = sc ? sc.name : '';
+  const btn = $('#sdSend');
+  btn.disabled = !cuts;
+  btn.classList.remove('sent');
+  btn.textContent = drv.on ? 'Send to Drive' : 'Link Drive to send';
+  const st = $('#sdState');
+  st.className = 'sd-state';
+  st.textContent = drv.on
+    ? (dirty ? 'not sent yet' : (drv.last ? 'last sent ' + fmtWhen(drv.last) : ''))
+    : 'saved on this device';
+}
+$('#sdName').addEventListener('input', () => {
+  const sc = curScene(); if (!sc) return;
+  const v = $('#sdName').value.trim();
+  if (v && v !== sc.name) { sc.name = v; sc.updated = Date.now(); store.set(LIBKEY, lib); paintSceneName(); syncSoon(); }
+});
+$('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
+$('#sdSend').onclick = async () => {
+  if (!drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
+  const st = $('#sdState'), btn = $('#sdSend');
+  st.className = 'sd-state'; st.textContent = 'sending…';
+  btn.disabled = true;
+  const ok = await drivePush();
+  btn.disabled = false;
+  if (ok) {
+    btn.classList.add('sent'); btn.textContent = 'Sent ✓';
+    st.className = 'sd-state ok'; st.textContent = (P.markers || []).length + ' cuts are on your other devices';
+  } else {
+    st.className = 'sd-state err'; st.textContent = lastErr || 'send failed — see the sync log';
+  }
+};
+$('#sdAgain').onclick = () => { $('#takebar').classList.remove('on'); startRetake(); };
+$('#sdEditor').onclick = () => go('edit');
+$('#sdHome').onclick = () => go('home');
 
 /* ═══ inbox — what a pull actually brought in ══════════════════════════
    A pull used to be a number in a log. This turns each arrival into a
@@ -1341,13 +1467,15 @@ function go(next) {
   screen = next;
   mode = next === 'edit' ? 'edit' : (next === 'capture' && mode === 'rec' ? 'rec' : 'idle');
   const b = document.body;
-  ['home', 'library', 'capture', 'edit'].forEach(k => b.classList.toggle('screen-' + k, k === next));
+  ['home', 'library', 'capture', 'edit', 'send'].forEach(k => b.classList.toggle('screen-' + k, k === next));
   b.classList.toggle('editing', next === 'edit');
   $('#home').classList.toggle('on', next === 'home');
   $('#library').classList.toggle('on', next === 'library');
+  $('#send').classList.toggle('on', next === 'send');
   $('#stage').classList.toggle('gone', next !== 'capture');
   $('#editor').classList.toggle('on', next === 'edit');
   if (next === 'home') paintHome();
+  if (next === 'send') paintSend();
   if (next === 'library') renderScenes();
   if (next === 'edit') { fit(); render(); }
   if (next !== 'edit' && playing) stopPlay();
@@ -1453,7 +1581,7 @@ function loadScene(sc) {
   if (typeof closeNote === 'function' && noteOpen) closeNote();
   if (liveMode) setLive(false);
   paintSceneName();
-  go(P.markers.length ? 'edit' : 'capture');
+  go(P.markers.length ? workScreen() : 'capture');
   store.set(LIBKEY, lib);
 }
 function blankScene(name) {
@@ -2016,20 +2144,20 @@ function renderScenes() {
     box.appendChild(card);
   });
 }
-function openScenes(on) { go(on ? 'library' : (P.markers.length ? 'edit' : 'home')); }
+function openScenes(on) { go(on ? 'library' : (P.markers.length ? workScreen() : 'home')); }
 $('#sceneBtn').onclick = () => go('library');
 $('#backBtn').onclick = () => go('library');
 $('#mHome').onclick = () => go('home');
 function cancelCapture() {
   if (mode === 'rec') return;
   if (retakeMode) { retakeMode = false; return go('edit'); }
-  go(P.markers.length ? 'edit' : 'home');
+  go(P.markers.length ? workScreen() : 'home');
 }
 $('#capBack').onclick = cancelCapture;
 $('#mKeys').onclick = () => $('#keys').classList.add('on');
 $('#keysClose').onclick = () => $('#keys').classList.remove('on');
 $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.remove('on'); };
-$('#libBack').onclick = () => go(P.markers.length ? 'edit' : 'home');
+$('#libBack').onclick = () => go(P.markers.length ? workScreen() : 'home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id;
@@ -2044,7 +2172,7 @@ function freshScene() {
 $('#scNew').onclick = () => freshScene();
 $('#hNew').onclick = () => freshScene();
 $('#hScenes').onclick = () => go('library');
-$('#hContinue').onclick = () => go(P.markers.length ? 'edit' : 'capture');
+$('#hContinue').onclick = () => go(P.markers.length ? workScreen() : 'capture');
 $('#scImport').onclick = () => $('#jsonIn').click();
 $('#scTutorial').onclick = () => {
   const sc = tutorialScene();
@@ -2291,7 +2419,9 @@ function endRec() {
   audio.pause();
   $('#stage').classList.remove('rec');
   $('#liveFoot').style.display = 'none';
-  go('edit');
+  /* a retake still needs the editor: comparing two takes is a timeline job */
+  const compact = isCompact() && !retakeMode;
+  go(compact ? 'send' : 'edit');
   if (retakeMode) {
     pendingTake = marks; P.takeNum++;
     showTakeBar(marks);
@@ -2299,9 +2429,13 @@ function endRec() {
   } else {
     P.markers = marks;
     recalc(); playPos = 0; lastPos = 0;
-    if (!curLayer().tracks.length) { addTrack('Sections'); addTrack('Drums'); }
-    fit(); render(); save();
+    /* on a small screen keep it to the timeline — tracks are for the device
+       you can actually type on, and an empty scene still opens fine there */
+    if (!compact && !curLayer().tracks.length) { addTrack('Sections'); addTrack('Drums'); }
+    if (!compact) { fit(); render(); }
+    save();
     logHist(lib.current, 'Captured ' + marks.length + (marks.length === 1 ? ' cut' : ' cuts'));
+    if (compact) paintSend();
   }
 }
 
@@ -3233,7 +3367,7 @@ addEventListener('keydown', e => {
     if ($('#inbox').classList.contains('on')) { closeInbox(); return; }
     if ($('#logs').classList.contains('on')) { $('#logs').classList.remove('on'); return; }
     if ($('#keys').classList.contains('on')) { $('#keys').classList.remove('on'); return; }
-    if (screen === 'library') { go(P.markers.length ? 'edit' : 'home'); return; }
+    if (screen === 'library') { go(P.markers.length ? workScreen() : 'home'); return; }
     if (screen === 'home') return;
     if (screen === 'capture' && mode !== 'rec') { cancelCapture(); return; }
     if (mode === 'rec') { e.preventDefault(); endRec(); } else { select(null); clearAux(); }
@@ -3289,7 +3423,7 @@ async function paintRestoreMenu() {
   const last = backups[backups.length - 1];
   $('#mRestoreWhen').textContent = last ? '· ' + fmtWhen(last.ts) : '· none yet';
 }
-$('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').classList.toggle('open'); paintRestoreMenu(); };
+$('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').classList.toggle('open'); paintRestoreMenu(); paintCompactMenu(); };
 addEventListener('click', () => $('#menu').classList.remove('open'));
 $('#mRestore').onclick = async e => {
   e.stopPropagation();
@@ -3315,10 +3449,11 @@ $('#mRestore').onclick = async e => {
   if (liveMode) setLive(false);
   paintSceneName();
   $('#menu').classList.remove('open');
-  go(P.markers && P.markers.length ? 'edit' : 'home');
+  go(P.markers && P.markers.length ? workScreen() : 'home');
   store.set(LIBKEY, lib); syncSoon();
   toast('restored the version from ' + fmtWhen(last.ts));
 };
+$('#mCompact').onclick = e => { e.stopPropagation(); setCompact(!isCompact()); };
 $('#mLogs').onclick = e => { e.stopPropagation(); $('#menu').classList.remove('open'); openLogs(); };
 $('#mExport').onclick = () => { save(); const sc = curScene(); if (sc) downloadScene(sc); };
 $('#mCopyScene').onclick = () => {
