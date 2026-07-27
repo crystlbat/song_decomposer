@@ -561,7 +561,7 @@ body.admin-mode #syncBtn{display:flex}
 .sc-card{
   border-radius:14px;border:1px solid var(--line);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-  transition:.15s;position:relative;overflow:hidden;
+  transition:.15s;position:relative;
 }
 .sc-card:hover{border-color:var(--line2);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
 .sc-card.cur{border-color:rgba(143,166,255,.5);background:linear-gradient(180deg,rgba(143,166,255,.09),rgba(143,166,255,.02))}
@@ -1071,6 +1071,37 @@ function blankScene(name) {
   return {
     id: uid(), name: name || 'Scene ' + (lib.scenes.length + 1), updated: Date.now(),
     data: { markers: [], layers: [{ id: uid(), name: 'Layer 1', color: LAYER_COLORS[0], vis: true, tracks: [] }], active: 0, overlay: false, duration: 60, audioName: '', takeNum: 1 }
+  };
+}
+/* a scene that teaches Tapline through its own content — no audio needed,
+   its cuts, tracks and notes are the walkthrough */
+function tutorialScene() {
+  const marks = [0, 8, 18, 30, 42, 54];
+  const note = (s, e, text) => ({ id: uid(), s, e, text });
+  const guide = {
+    id: uid(), key: uid(), name: 'Start here', color: PALETTE[0], vibe: 0,
+    blocks: [
+      note(0, 8, "Welcome — this is a demo scene, no real audio attached, just a guided tour."),
+      note(8, 18, "The diamonds on the ruler above are cuts — they mark where a song changes. Tap the timeline in capture mode to drop your own."),
+      note(18, 30, "Each row below is a track. Click any empty spot in a lane to drop a note there — try the row underneath."),
+      note(30, 42, "Space plays/pauses. ← → jumps cut to cut. Shift+M adds a cut at the playhead. Del removes whatever's selected."),
+      note(42, 54, "When you're ready: load your own audio from the ⋯ menu, tap out real cuts, and delete this scene from Scenes whenever you like."),
+    ]
+  };
+  const tryit = {
+    id: uid(), key: uid(), name: 'Try it yourself', color: PALETTE[1], vibe: 1,
+    blocks: [
+      note(8, 18, "Click an empty stretch of this row, then just start typing — it opens a note right where you clicked."),
+      note(30, 42, "Notes can snap to the whole section or pin to a single cut — toggle \"snap\" in the note bar while typing."),
+    ]
+  };
+  return {
+    id: uid(), name: 'Start here — how Tapline works', updated: Date.now(),
+    data: {
+      markers: marks,
+      layers: [{ id: uid(), name: 'Layer 1', color: LAYER_COLORS[0], vis: true, tracks: [guide, tryit] }],
+      active: 0, overlay: false, duration: 60, audioName: '', takeNum: 1
+    }
   };
 }
 function sceneStats(sc) {
@@ -2114,8 +2145,14 @@ function editBlock(b, bk) {
   inp.focus(); inp.select();
   const done = (keep) => {
     if (b._done) return; b._done = true;
-    bk.text = keep ? inp.value.trim() : (bk.text || '');
-    if (!bk.text) { const [T] = findBlock(bk.id); if (T) T.blocks = T.blocks.filter(x => x.id !== bk.id); }
+    const before = bk.text || '';
+    bk.text = keep ? inp.value.trim() : before;
+    if (!bk.text) {
+      const [T] = findBlock(bk.id);
+      if (T) { T.blocks = T.blocks.filter(x => x.id !== bk.id); logHist(lib.current, 'Removed a note on ' + T.name); }
+    } else if (bk.text !== before) {
+      logHist(lib.current, 'Edited a note to: "' + (bk.text.length > 40 ? bk.text.slice(0, 40) + '…' : bk.text) + '"');
+    }
     render(); save();
   };
   inp.addEventListener('keydown', e => {
@@ -2698,8 +2735,9 @@ addEventListener('resize', syncTopbar);
   if (stored && Array.isArray(stored.scenes) && stored.scenes.length) lib = stored;
   else {
     const old = await store.get(OLDKEY);          /* carry a pre-scenes breakdown across */
-    const sc = blankScene('Scene 1');
-    if (old && old.markers && old.markers.length) { sc.data = migrate(old); sc.name = old.audioName || 'Scene 1'; }
+    let sc;
+    if (old && old.markers && old.markers.length) { sc = blankScene('Scene 1'); sc.data = migrate(old); sc.name = old.audioName || 'Scene 1'; }
+    else sc = tutorialScene();                     /* brand-new install — start with the guided walkthrough */
     lib = { current: sc.id, scenes: [sc] };
     store.set(LIBKEY, lib);
   }
