@@ -1141,6 +1141,7 @@ function undo() {
   lib = JSON.parse(u.lib); lib.current = u.id;
   const sc = curScene(); if (!sc) return;
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  markPLoaded(sc);
   armedKey = null; sel = null; selMarker = -1;
   paintSceneName(); render();
   if (screen === 'library') renderScenes();
@@ -1183,10 +1184,24 @@ const SCENE_KEYS = ['markers', 'layers', 'active', 'overlay', 'duration', 'audio
 const sceneData = () => { const o = {}; SCENE_KEYS.forEach(k => o[k] = P[k]); return o; };
 const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 
+/* Which scene, at which version, the live editor (P) was filled from. A
+   pull replaces lib.scenes but deliberately leaves P alone, so without this
+   the next save() would serialise the pre-pull P over the freshly pulled
+   scene and stamp it Date.now() — making the stale copy look newest and
+   winning the next push. That is how a pull could shrink the library. */
+let pFrom = { id: null, updated: 0 };
+const markPLoaded = sc => { pFrom = { id: sc ? sc.id : null, updated: sc ? (sc.updated || 0) : 0 }; };
+
 let saveT;
 function save() {
   const sc = curScene();
-  if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
+  if (sc && sc.id !== pFrom.id) {
+    /* P belongs to a different scene than the one now current — writing it
+       here would overwrite unrelated work */
+    slog('err', 'save skipped — editor holds a different scene', 'editor=' + pFrom.id + ' current=' + sc.id);
+    return;
+  }
+  if (sc) { sc.data = sceneData(); sc.updated = Date.now(); pFrom.updated = sc.updated; if (sc.deleted) sc.deleted = false; }
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
     const ok = await store.set(LIBKEY, lib);
@@ -1231,6 +1246,7 @@ function paintSceneName() {
 }
 function loadScene(sc) {
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  markPLoaded(sc);
   lib.current = sc.id;
   armedKey = null; playPos = 0; lastPos = 0; selMarker = -1; sel = null;
   if (typeof closeNote === 'function' && noteOpen) closeNote();
@@ -1465,11 +1481,29 @@ function tidyBlank() {
    flight: a slow request can take several seconds, plenty of time to
    capture more cuts, and a reply describing the world as of when the
    request was *sent* must never stomp on something newer than that. */
-function mergeScenes(localScenes, incoming) {
-  const m = {};
+/* Newest-updated wins, EXCEPT when both sides moved since the last sync.
+   Whole-scene last-write-wins is fine for "I edited on one device at a
+   time", but this app's whole workflow is cuts on the tablet, notes on the
+   laptop, back to the tablet — genuinely concurrent edits to one scene.
+   There LWW silently throws away one side's work, so instead of picking a
+   loser we keep the remote copy alongside as a fork and let the user
+   reconcile. Nothing is ever discarded to make the merge tidy. */
+function mergeScenes(localScenes, incoming, sinceSync) {
+  const m = {}, forks = [];
   localScenes.forEach(s => { m[s.id] = s; });
-  incoming.forEach(s => { const p = m[s.id]; if (!p || (s.updated || 0) >= (p.updated || 0)) m[s.id] = s; });
-  return Object.keys(m).map(k => m[k]);
+  incoming.forEach(s => {
+    const p = m[s.id];
+    if (!p) { m[s.id] = s; return; }
+    const remoteNewer = (s.updated || 0) > (p.updated || 0);
+    const localMovedToo = (p.updated || 0) > (sinceSync || 0);
+    if (remoteNewer && localMovedToo && !p.deleted && !s.deleted) {
+      const fork = Object.assign({}, s, { id: uid(), name: s.name + ' (other device)' });
+      forks.push(fork); m[fork.id] = fork;
+      return;                       /* local stays put; both survive */
+    }
+    if ((s.updated || 0) >= (p.updated || 0)) m[s.id] = s;
+  });
+  return { scenes: Object.keys(m).map(k => m[k]), forks };
 }
 let syncing = false, lastErr = '', dirty = false;
 
@@ -1485,7 +1519,9 @@ async function driveXfer(dir) {
   const t0 = Date.now();
   const push = dir !== 'pull';
   try {
-    const sc = curScene(); if (sc) { sc.data = sceneData(); sc.updated = sc.updated || Date.now(); }
+    /* only fold the editor into the scene it actually came from */
+    const sc = curScene();
+    if (sc && sc.id === pFrom.id) { sc.data = sceneData(); sc.updated = sc.updated || Date.now(); }
     const body = push ? JSON.stringify({ scenes: lib.scenes }) : null;
     slog('net', (push ? 'POST' : 'GET') + ' → drive', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
 
@@ -1510,17 +1546,33 @@ async function driveXfer(dir) {
     const before = lib.scenes.length;
     const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
     const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
-    lib.scenes = mergeScenes(lib.scenes, incoming);
+    const merged = mergeScenes(lib.scenes, incoming, drv.last);
+    lib.scenes = merged.scenes;
     slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
       'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
+    merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (other device)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
 
     lastErr = ''; drv.last = Date.now(); saveDrv();
     if (push) dirty = false;
+
+    /* A pull can replace the very scene the editor is showing. P is a copy
+       taken at load time, so it is now stale — and the next save() would
+       write it back over the newer data. If nothing has been edited since P
+       was loaded, refresh it silently; if it has, the merge above already
+       forked the remote copy, so keep editing and just say so. */
+    const cur = curScene();
+    if (cur && cur.id === pFrom.id && (cur.updated || 0) !== pFrom.updated) {
+      Object.assign(P, migrate(JSON.parse(JSON.stringify(cur.data))));
+      markPLoaded(cur);
+      slog('info', 'editor refreshed from the pulled copy of "' + cur.name + '"');
+      if (screen === 'edit') { recalc(); render(); }
+    }
     store.set(LIBKEY, lib);
     maybeSnapshot();
 
-    /* never touches the live editor (P), the current scene, or the screen —
-       whatever you are looking at stays exactly as it is */
+    if (merged.forks.length) toast(merged.forks.length === 1
+      ? 'both devices changed a scene — theirs kept as "' + merged.forks[0].name + '"'
+      : merged.forks.length + ' scenes changed on both devices — both copies kept');
     paintSceneName(); paintDrive();
     if (screen === 'library') renderScenesIfIdle();
     if (screen === 'home') paintHome();
@@ -1755,6 +1807,7 @@ $('#mScenes').onclick = () => go('library');
 function freshScene() {
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id;
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  markPLoaded(sc);
   armedKey = null; selMarker = -1; sel = null; playPos = 0; lastPos = 0;
   liveMarks = []; $('#markCount').textContent = '0';
   $('#idleHint').style.display = 'block'; $('#takebar').classList.remove('on');
@@ -3028,6 +3081,7 @@ $('#mRestore').onclick = async e => {
   if (!curScene() || curScene().deleted) lib.current = (visibleScenes()[0] || lib.scenes[0] || {}).id;
   const sc = curScene();
   if (sc) Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  markPLoaded(sc);
   armedKey = null; playPos = 0; lastPos = 0; selMarker = -1; sel = null;
   if (noteOpen) closeNote();
   if (liveMode) setLive(false);
@@ -3131,6 +3185,7 @@ addEventListener('resize', syncTopbar);
 
   const sc = curScene();
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  markPLoaded(sc);
   paintAudioTag();
   paintSceneName();
 
