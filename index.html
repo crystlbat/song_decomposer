@@ -545,6 +545,8 @@ body.admin-mode #syncBtn{display:flex}
 #syncBtn.err{color:var(--live);border-color:rgba(232,201,155,.5)}
 #syncBtn.err i{background:var(--live);box-shadow:0 0 10px var(--live)}
 #syncBtn.done{background:rgba(143,166,255,.16);color:var(--cut)}
+#syncBtn.pending{color:var(--live);border-color:rgba(232,201,155,.45)}
+#syncBtn.pending i{background:var(--live);box-shadow:0 0 10px var(--live)}
 @media (max-width:900px){#syncBtn span{display:none}#syncBtn{padding:0 9px}}
 
 #sceneBtn{
@@ -637,6 +639,25 @@ body.admin-mode #syncBtn{display:flex}
 @media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
 
+/* ── sync log ───────────────────────────────────────── */
+.logs-in{max-width:860px;margin:0 auto;padding:min(9vh,70px) 24px 60px}
+.log-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.log-head .spacer{flex:1}
+#logList{
+  border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.34);
+  max-height:62vh;overflow:auto;padding:4px;
+}
+.log-row{display:flex;gap:10px;padding:6px 9px;border-radius:5px;font-family:var(--mono);font-size:10.5px;line-height:1.5;align-items:baseline}
+.log-row:nth-child(odd){background:rgba(255,255,255,.022)}
+.log-row .lt{color:var(--faint);flex:none}
+.log-row .lk{flex:none;min-width:52px;text-transform:uppercase;font-size:9px;letter-spacing:.08em}
+.log-row .lm{color:var(--dim);overflow-wrap:anywhere;min-width:0}
+.log-row.ok .lk{color:var(--t3)}
+.log-row.err .lk{color:var(--play)}
+.log-row.err .lm{color:var(--text)}
+.log-row.net .lk{color:var(--cut)}
+.log-row.info .lk{color:var(--faint)}
+.log-empty{padding:22px;text-align:center;font-family:var(--ui);font-size:11px;color:var(--faint)}
 #peek{
   position:fixed;z-index:40;display:none;max-width:340px;padding:10px 13px;border-radius:8px;
   border:1px solid var(--line2);background:linear-gradient(180deg,rgba(46,41,74,.98),rgba(32,28,52,.98));backdrop-filter:blur(14px);
@@ -725,6 +746,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="mCopy">Copy as text</button>
     <button id="mCsv">Export .csv</button>
     <hr>
+    <button id="mLogs">Sync log</button>
     <button id="mRestore">Restore backup<span id="mRestoreWhen"></span></button>
     <hr>
     <button id="mReset" class="danger">New scene</button>
@@ -870,7 +892,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 
   <div id="drivePanel">
-    <p class="dp-note">Your scenes live in one text file — <b>tapline-state.json</b> — in your Drive. Paste the web-app URL below on every device and they all read and write that one file. No sign-in, no keys.</p>
+    <p class="dp-note">Your scenes live in one text file — <b>tapline-state.json</b> — in your Drive. Paste the web-app URL below on every device and they all read and write that one file. No sign-in, no keys. Nothing transfers on its own: <i>pull</i> before you start on a device, <i>push</i> when you're done, and the <i>sync log</i> shows exactly what happened.</p>
     <div class="dp-row">
       <input id="dpId" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false" autocomplete="off">
       <button class="btn key" id="dpConnect">Link</button>
@@ -878,7 +900,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <div class="dp-row" id="dpLive">
       <span id="dpStatus">not linked</span>
       <span class="spacer"></span>
-      <button class="btn" id="dpSync">Sync now</button>
+      <button class="btn key" id="dpPull">Pull</button>
+      <button class="btn" id="dpPush">Push</button>
+      <button class="btn ghost" id="dpLogs">Sync log</button>
       <button class="btn ghost" id="dpOut">Unlink</button>
     </div>
     <button class="btn ghost" id="dpHow">Where do I get that URL?</button>
@@ -928,6 +952,21 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <div class="krow"><kbd>+ −</kbd><span>zoom · pinch on a tablet</span></div>
     <div class="krow"><kbd>esc</kbd><span>back a screen</span></div>
     <button class="btn" id="keysClose">close</button>
+  </div>
+</div>
+
+<div id="logs" class="page">
+  <div class="logs-in">
+    <span class="eyebrow">sync log</span>
+    <div class="log-head">
+      <button class="btn" id="logPull">Pull from Drive</button>
+      <button class="btn" id="logPush">Push to Drive</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="logCopy">Copy log</button>
+      <button class="btn ghost" id="logClear">Clear</button>
+      <button class="btn" id="logsClose">Close</button>
+    </div>
+    <div id="logList"></div>
   </div>
 </div>
 
@@ -1025,6 +1064,48 @@ const store = {
     }
     return ok;
   }
+};
+
+/* ═══ sync log — the record of what the network actually did ═══════════
+   Written straight to localStorage on every entry, so a reload, a crash or
+   a tablet killing the tab still leaves the evidence behind. */
+const LOGKEY = 'tapline.log';
+let logs = [];
+try { const raw = localStorage.getItem(LOGKEY); if (raw) logs = JSON.parse(raw) || []; } catch (e) {}
+function slog(kind, msg, extra) {
+  const row = { ts: Date.now(), kind, msg: String(msg) };
+  if (extra !== undefined && extra !== null && extra !== '') row.extra = String(extra).slice(0, 500);
+  logs.push(row);
+  while (logs.length > 400) logs.shift();
+  try { localStorage.setItem(LOGKEY, JSON.stringify(logs)); } catch (e) {}
+  if ($('#logs').classList.contains('on')) paintLogs();
+}
+const logStamp = ts => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function paintLogs() {
+  const box = $('#logList'); if (!box) return;
+  box.innerHTML = '';
+  if (!logs.length) {
+    const e = el('div', 'log-empty');
+    e.textContent = 'Nothing logged yet. Hit Pull or Push and the exact result shows up here.';
+    box.appendChild(e); return;
+  }
+  logs.slice().reverse().forEach(r => {
+    const row = el('div', 'log-row ' + (r.kind || 'info'));
+    const t = el('span', 'lt'); t.textContent = logStamp(r.ts);
+    const k = el('span', 'lk'); k.textContent = r.kind || 'info';
+    const m = el('span', 'lm'); m.textContent = r.msg + (r.extra ? ' — ' + r.extra : '');
+    row.append(t, k, m); box.appendChild(row);
+  });
+}
+function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
+$('#logsClose').onclick = () => $('#logs').classList.remove('on');
+$('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
+$('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
+$('#logPull').onclick = () => drivePull();
+$('#logPush').onclick = () => drivePush();
+$('#logCopy').onclick = () => {
+  const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
+  navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
 };
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
@@ -1390,54 +1471,83 @@ function mergeScenes(localScenes, incoming) {
   incoming.forEach(s => { const p = m[s.id]; if (!p || (s.updated || 0) >= (p.updated || 0)) m[s.id] = s; });
   return Object.keys(m).map(k => m[k]);
 }
-let syncing = false, lastErr = '', lastMoan = 0;
-async function driveSync(quiet) {
-  if (!drv.on || !drv.url || syncing) return;
+let syncing = false, lastErr = '', dirty = false;
+
+/* Sync only ever runs because you asked for it. Nothing here fires on a
+   timer, on focus, or on a save — an automatic round trip that fails quietly
+   is exactly what made this impossible to diagnose, so every transfer is now
+   an explicit act with a logged result. `dirty` just tracks whether local
+   work has moved on since the last successful push. */
+async function driveXfer(dir) {
+  if (!drv.url) { slog('err', 'no drive url set'); toast('Link a Drive URL first'); return false; }
+  if (syncing) { slog('info', 'ignored — a transfer is already running'); return false; }
   syncing = true; paintDrive();
+  const t0 = Date.now();
+  const push = dir !== 'pull';
   try {
     const sc = curScene(); if (sc) { sc.data = sceneData(); sc.updated = sc.updated || Date.now(); }
-    const r = await fetch(drv.url, { method: 'POST', body: JSON.stringify({ scenes: lib.scenes }) });
-    if (!r.ok) throw new Error('http ' + r.status);
-    const txt = await r.text();
-    let merged = null;
-    try { merged = JSON.parse(txt); } catch (e) { throw new Error('bad reply — is the deployment set to "anyone"?'); }
-    if (!merged || !Array.isArray(merged.scenes)) throw new Error('unexpected reply');
+    const body = push ? JSON.stringify({ scenes: lib.scenes }) : null;
+    slog('net', (push ? 'POST' : 'GET') + ' → drive', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
 
-    /* background sync only ever updates the scene list in memory — it never
-       touches the live editor (P), reassigns the current scene, or navigates.
-       Whatever you're looking at stays exactly as it is; the fresh data is
-       just there waiting the next time you open Scenes or reload. */
-    const incoming = merged.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+    const r = await fetch(drv.url, push ? { method: 'POST', body } : { method: 'GET' });
+    slog(r.ok ? 'net' : 'err', 'http ' + r.status + (r.redirected ? ' (redirected)' : ''), r.ok ? '' : r.statusText);
+    if (!r.ok) throw new Error('http ' + r.status + ' ' + (r.statusText || ''));
+
+    const txt = await r.text();
+    slog('net', 'reply ' + txt.length + ' bytes');
+    let payload = null;
+    try { payload = JSON.parse(txt); }
+    catch (e) {
+      /* an HTML body here is almost always Google's sign-in or permission
+         page, which is the single most common reason sync silently dies */
+      const html = /^\s*<|<!doctype/i.test(txt);
+      slog('err', html ? 'got an HTML page, not JSON — deployment is not public' : 'reply was not JSON', txt.slice(0, 160));
+      throw new Error(html ? 'not public — set access to "anyone"' : 'reply was not JSON');
+    }
+    if (!payload || !Array.isArray(payload.scenes)) { slog('err', 'reply had no scenes array', txt.slice(0, 160)); throw new Error('unexpected reply'); }
+
+    const incoming = payload.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+    const before = lib.scenes.length;
+    const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
+    const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
     lib.scenes = mergeScenes(lib.scenes, incoming);
+    slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
+      'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
+
     lastErr = ''; drv.last = Date.now(); saveDrv();
+    if (push) dirty = false;
     store.set(LIBKEY, lib);
     maybeSnapshot();
 
+    /* never touches the live editor (P), the current scene, or the screen —
+       whatever you are looking at stays exactly as it is */
     paintSceneName(); paintDrive();
     if (screen === 'library') renderScenesIfIdle();
     if (screen === 'home') paintHome();
-    if (!quiet) toast('synced · ' + lib.scenes.length + (lib.scenes.length === 1 ? ' scene' : ' scenes') + ' in drive');
+    toast((push ? 'pushed · ' : 'pulled · ') + lib.scenes.length + (lib.scenes.length === 1 ? ' scene' : ' scenes'));
+    return true;
   } catch (e) {
     lastErr = String(e.message || e);
+    /* fetch() rejects with a bare "Failed to fetch" for CORS and offline
+       alike — say so rather than leaving a one-word error */
+    if (/failed to fetch|networkerror|load failed/i.test(lastErr)) {
+      slog('err', 'request never completed', navigator.onLine ? 'browser is online — blocked by CORS, or the URL is wrong' : 'browser reports offline');
+    } else slog('err', (push ? 'push' : 'pull') + ' failed', lastErr);
     paintDrive(lastErr);
-    const nag = Date.now() - lastMoan > 60000;
-    if (!quiet || nag) { lastMoan = Date.now(); toast('sync failed · ' + lastErr); }
+    toast((push ? 'push' : 'pull') + ' failed · ' + lastErr);
+    return false;
   } finally {
     syncing = false; paintDrive();
   }
 }
-let syncT;
-const syncSoon = () => { if (!drv.on) return; clearTimeout(syncT); syncT = setTimeout(() => driveSync(true), 2500); };
+const drivePull = () => driveXfer('pull');
+const drivePush = () => driveXfer('push');
+/* every edit used to schedule a background push; now it only records that
+   there is something worth pushing, which the UI surfaces */
+const syncSoon = () => { if (drv.on) { dirty = true; paintDrive(); } };
 
-/* keep pulling in the background so the other device's edits arrive on their own */
-setInterval(() => { if (drv.on && !document.hidden && !syncing) driveSync(true); }, 25000);
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { flushSave(); if (drv.on) driveSync(true); }
-  else driveSync(true);
-});
 addEventListener('pagehide', flushSave);
-addEventListener('focus', () => driveSync(true));
-addEventListener('online', () => driveSync(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 function saveDrv() { store.set(DKEY, { url: drv.url, on: drv.on }); }
 function paintDrive(err) {
   const sb = $('#syncBtn'), sl = $('#syncLbl');
@@ -1446,10 +1556,12 @@ function paintDrive(err) {
     sb.classList.toggle('on', drv.on && !e);
     sb.classList.toggle('busy', syncing);
     sb.classList.toggle('err', !!(drv.on && e));
+    sb.classList.toggle('pending', !!(drv.on && dirty && !e && !syncing));
     if (!drv.on) sl.textContent = 'sync off';
     else if (syncing) sl.textContent = 'syncing';
     else if (e) sl.textContent = 'sync error';
-    else sl.textContent = drv.last ? new Date(drv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'synced';
+    else if (dirty) sl.textContent = 'unpushed';
+    else sl.textContent = drv.last ? new Date(drv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ready';
   }
   const b = $('#driveBtn'), st = $('#dpStatus');
   b.classList.toggle('ok', drv.on);
@@ -1459,17 +1571,13 @@ function paintDrive(err) {
   st.textContent = e ? e
     : drv.on ? ('linked · last sync ' + (drv.last ? new Date(drv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'))
     : 'not linked';
-  if (drv.on && !e) st.textContent += ' · re-checks every 25s';
-  const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && drv.on) ? 'kept in sync with your drive' : 'stored on this device';
+  if (drv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
+  const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && drv.on) ? 'synced with your drive when you ask' : 'stored on this device';
 }
 $('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
 $('#syncBtn').onclick = () => {
   if (!drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
-  const sb = $('#syncBtn');
-  driveSync(false).then(() => {
-    if (lastErr) return;
-    sb.classList.add('done'); setTimeout(() => sb.classList.remove('done'), 900);
-  });
+  openLogs();
 };
 $('#dpId').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dpConnect').click(); });
 $('#dpHow').onclick = () => $('#dpSetup').classList.toggle('on');
@@ -1479,12 +1587,15 @@ $('#dpConnect').onclick = async () => {
   const u = $('#dpId').value.trim();
   if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) return toast('paste the /exec url from your deployment');
   drv.url = u; drv.on = true; lastErr = ''; saveDrv();
+  slog('info', 'linking', u);
   $('#dpStatus').textContent = 'linking…';
-  await driveSync(false);
-  if (lastErr) { drv.on = false; saveDrv(); paintDrive(lastErr); }
-  else toast('linked — this page now keeps itself in sync');
+  await drivePull();
+  if (lastErr) { drv.on = false; saveDrv(); paintDrive(lastErr); openLogs(); }
+  else toast('linked — pull and push from the sync log when you want');
 };
-$('#dpSync').onclick = () => driveSync(false);
+$('#dpPull').onclick = drivePull;
+$('#dpPush').onclick = drivePush;
+$('#dpLogs').onclick = openLogs;
 $('#dpOut').onclick = () => { drv.on = false; saveDrv(); paintDrive(); toast('unlinked — still saved on this device'); };
 
 const visibleScenes = () => lib.scenes.filter(x => !x.deleted);
@@ -2839,6 +2950,7 @@ $('#nbTab').addEventListener('click', () => armStep(1));
 addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
   if (e.key === 'Escape') {
+    if ($('#logs').classList.contains('on')) { $('#logs').classList.remove('on'); return; }
     if ($('#keys').classList.contains('on')) { $('#keys').classList.remove('on'); return; }
     if (screen === 'library') { go(P.markers.length ? 'edit' : 'home'); return; }
     if (screen === 'home') return;
@@ -2925,6 +3037,7 @@ $('#mRestore').onclick = async e => {
   store.set(LIBKEY, lib); syncSoon();
   toast('restored the version from ' + fmtWhen(last.ts));
 };
+$('#mLogs').onclick = e => { e.stopPropagation(); $('#menu').classList.remove('open'); openLogs(); };
 $('#mExport').onclick = () => { save(); const sc = curScene(); if (sc) downloadScene(sc); };
 $('#mCopyScene').onclick = () => {
   save(); const sc = curScene(); if (!sc) return;
@@ -3029,14 +3142,12 @@ addEventListener('resize', syncTopbar);
   paintDrive();
   go('home');
   maybeSnapshot();
-  /* This round trip takes seconds against Apps Script, and the app is fully
-     usable throughout — tapping Scenes during it is normal. Re-asserting the
-     landing screen afterwards would yank the user out of wherever they went
-     and make them click back in, so only tidy up if they never left home. */
-  if (drv.on) {
-    await driveSync(true);
-    if (screen === 'home') { tidyBlank(); if (screen === 'home') paintHome(); }
-  }
+  /* No network on boot any more: startup is instant and offline-identical,
+     and nothing can navigate out from under you seconds after load. Pull
+     when you want the other device's work. */
+  tidyBlank();
+  if (screen === 'home') paintHome();
+  slog('info', 'ready', drv.on ? 'drive linked · pull/push is manual' : 'drive not linked · local only');
 })();
 </script>
 </body>
