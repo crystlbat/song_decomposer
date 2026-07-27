@@ -1814,9 +1814,11 @@ $('#keepTake').onclick = () => {
   pushUndo('the old take');
   P.markers = pendingTake;
   recalc();
-  pendingTake = null; $('#takebar').classList.remove('on'); fit(); render(); save();
+  pendingTake = null; $('#takebar').classList.remove('on'); fit(); save();
   logHist(lib.current, 'Kept take ' + P.takeNum + ' (' + P.markers.length + ' cuts)');
   toast('Take kept');
+  freshMarkers = P.markers.slice(); render();
+  setTimeout(() => { freshMarkers = []; render(); }, 2600);
 };
 $('#discardTake').onclick = () => {
   pendingTake = null; P.takeNum--; $('#takebar').classList.remove('on'); render();
