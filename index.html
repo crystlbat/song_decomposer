@@ -1130,7 +1130,7 @@ function fmtWhen(ts) {
 const undoStack = [];
 function pushUndo(label) {
   try {
-    const sc = curScene(); if (sc) sc.data = sceneData();
+    commitP(curScene(), false);
     undoStack.push({ label, id: lib.current, lib: JSON.stringify(lib) });
     if (undoStack.length > 20) undoStack.shift();
   } catch (e) {}
@@ -1192,6 +1192,20 @@ const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 let pFrom = { id: null, updated: 0 };
 const markPLoaded = sc => { pFrom = { id: sc ? sc.id : null, updated: sc ? (sc.updated || 0) : 0 }; };
 
+/* The one place the editor is folded back into a scene. Every caller goes
+   through here so pFrom can never drift out of step with the scene it
+   describes — when it did, the "has this scene changed under me?" check
+   below compared two numbers that were always different and reported a
+   refresh on every single transfer. */
+function commitP(sc, restamp) {
+  if (!sc || sc.id !== pFrom.id) return false;
+  sc.data = sceneData();
+  sc.updated = restamp ? Date.now() : (sc.updated || Date.now());
+  pFrom.updated = sc.updated;
+  if (sc.deleted) sc.deleted = false;
+  return true;
+}
+
 let saveT;
 function save() {
   const sc = curScene();
@@ -1201,7 +1215,7 @@ function save() {
     slog('err', 'save skipped — editor holds a different scene', 'editor=' + pFrom.id + ' current=' + sc.id);
     return;
   }
-  if (sc) { sc.data = sceneData(); sc.updated = Date.now(); pFrom.updated = sc.updated; if (sc.deleted) sc.deleted = false; }
+  commitP(sc, true);
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
     const ok = await store.set(LIBKEY, lib);
@@ -1216,7 +1230,7 @@ function save() {
    about to lose the CPU, instead of trusting a timer to survive that */
 function flushSave() {
   clearTimeout(saveT);
-  const sc = curScene(); if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
+  commitP(curScene(), true);
   try { localStorage.setItem(LIBKEY, JSON.stringify(lib)); } catch (e) {}
   store.set(LIBKEY, lib);
   maybeSnapshot();
@@ -1519,9 +1533,7 @@ async function driveXfer(dir) {
   const t0 = Date.now();
   const push = dir !== 'pull';
   try {
-    /* only fold the editor into the scene it actually came from */
-    const sc = curScene();
-    if (sc && sc.id === pFrom.id) { sc.data = sceneData(); sc.updated = sc.updated || Date.now(); }
+    commitP(curScene(), false);   /* fold the editor in, without restamping */
     const body = push ? JSON.stringify({ scenes: lib.scenes }) : null;
     slog('net', (push ? 'POST' : 'GET') + ' → drive', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
 
@@ -1561,11 +1573,19 @@ async function driveXfer(dir) {
        was loaded, refresh it silently; if it has, the merge above already
        forked the remote copy, so keep editing and just say so. */
     const cur = curScene();
-    if (cur && cur.id === pFrom.id && (cur.updated || 0) !== pFrom.updated) {
-      Object.assign(P, migrate(JSON.parse(JSON.stringify(cur.data))));
-      markPLoaded(cur);
-      slog('info', 'editor refreshed from the pulled copy of "' + cur.name + '"');
-      if (screen === 'edit') { recalc(); render(); }
+    if (cur && cur.id === pFrom.id) {
+      /* compare the actual content, not timestamps — a timestamp differs for
+         reasons that have nothing to do with the data, and reloading P on
+         those is invisible churn that only makes the log lie */
+      const fresh = JSON.stringify(cur.data);
+      if (fresh !== JSON.stringify(sceneData())) {
+        const wasCuts = (P.markers || []).length;
+        Object.assign(P, migrate(JSON.parse(fresh)));
+        markPLoaded(cur);
+        slog('info', 'editor refreshed from the pulled copy of "' + cur.name + '"',
+          wasCuts + ' → ' + (P.markers || []).length + ' cuts');
+        if (screen === 'edit') { recalc(); render(); updatePos(); }
+      } else markPLoaded(cur);     /* identical — just realign the version */
     }
     store.set(LIBKEY, lib);
     maybeSnapshot();
