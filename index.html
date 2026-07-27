@@ -995,7 +995,7 @@ const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 let saveT;
 function save() {
   const sc = curScene();
-  if (sc) { sc.data = sceneData(); sc.updated = Date.now(); }
+  if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
   clearTimeout(saveT);
   saveT = setTimeout(() => { store.set(LIBKEY, lib); syncSoon(); }, 400);
   paintSceneName();
@@ -1210,7 +1210,6 @@ let syncing = false, lastErr = '', lastMoan = 0;
 async function driveSync(quiet) {
   if (!drv.on || !drv.url || syncing) return;
   syncing = true; paintDrive();
-  const myStamp = (curScene() || {}).updated || 0;
   try {
     const sc = curScene(); if (sc) { sc.data = sceneData(); sc.updated = sc.updated || Date.now(); }
     const r = await fetch(drv.url, { method: 'POST', body: JSON.stringify({ scenes: lib.scenes }) });
@@ -1220,35 +1219,14 @@ async function driveSync(quiet) {
     try { merged = JSON.parse(txt); } catch (e) { throw new Error('bad reply — is the deployment set to "anyone"?'); }
     if (!merged || !Array.isArray(merged.scenes)) throw new Error('unexpected reply');
 
-    const keep = lib.current;
+    /* background sync only ever updates the scene list in memory — it never
+       touches the live editor (P), reassigns the current scene, or navigates.
+       Whatever you're looking at stays exactly as it is; the fresh data is
+       just there waiting the next time you open Scenes or reload. */
     lib.scenes = merged.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
-    const stillHere = lib.scenes.some(x => x.id === keep && !x.deleted);
-    lib.current = stillHere ? keep : (visibleScenes()[0] || {}).id;
     lastErr = ''; drv.last = Date.now(); saveDrv();
     store.set(LIBKEY, lib);
 
-    const now = curScene();
-    if (!stillHere && now) {
-      /* the scene we were looking at got deleted on the other device */
-      Object.assign(P, migrate(JSON.parse(JSON.stringify(now.data))));
-      armedKey = null; sel = null; selMarker = -1;
-      if (typeof closeNote === 'function' && noteOpen) closeNote();
-      paintSceneName();
-      if (screen === 'edit' || screen === 'capture') go(now.data.markers && now.data.markers.length ? 'edit' : 'capture');
-      toast('that scene was deleted on the other device');
-    } else if (!stillHere && !now) {
-      const blank = blankScene(); lib.scenes.unshift(blank); lib.current = blank.id;
-      Object.assign(P, migrate(JSON.parse(JSON.stringify(blank.data))));
-      store.set(LIBKEY, lib);
-      if (screen === 'edit' || screen === 'capture') go('home');
-      toast('that scene was deleted on the other device');
-    } else if (now && !noteOpen && (now.updated || 0) > myStamp) {
-      /* if the other device edited the scene we're looking at, take it — unless we're mid-note */
-      Object.assign(P, migrate(JSON.parse(JSON.stringify(now.data))));
-      armedKey = null; sel = null; selMarker = -1;
-      if (screen === 'edit') render();
-      toast('updated from the other device');
-    }
     paintSceneName(); paintDrive();
     if (screen === 'library') renderScenes();
     if (screen === 'home') paintHome();
