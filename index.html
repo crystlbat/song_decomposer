@@ -643,6 +643,18 @@ body.admin-mode #syncBtn{display:flex}
 }
 #peek.on{display:block}
 #peek i{display:block;font-family:var(--ui);font-style:normal;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:5px;font-weight:400}
+#blockMenu{
+  position:fixed;z-index:41;display:none;padding:5px;border-radius:9px;min-width:140px;
+  border:1px solid var(--line2);background:linear-gradient(180deg,rgba(46,41,74,.98),rgba(32,28,52,.98));
+  backdrop-filter:blur(14px);box-shadow:0 18px 46px rgba(0,0,0,.6);
+}
+#blockMenu.on{display:block}
+#blockMenu button{
+  display:block;width:100%;text-align:left;white-space:nowrap;font-family:var(--ui);font-size:12px;font-weight:600;
+  color:var(--play);padding:10px 14px;border-radius:6px;
+}
+#blockMenu button:hover{background:rgba(217,143,196,.14)}
+.block.holding{filter:brightness(1.4);box-shadow:0 0 0 2px var(--play)}
 #toast{
   position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);z-index:60;
   padding:10px 16px;border-radius:8px;background:linear-gradient(180deg,rgba(46,41,74,.98),rgba(32,28,52,.98));border:1px solid var(--line2);
@@ -917,6 +929,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </div>
 
 <div id="peek"></div>
+<div id="blockMenu"></div>
 <div id="toast"></div>
 <input type="file" id="fileIn" accept="audio/*" hidden>
 <input type="file" id="jsonIn" accept="application/json,.json" hidden>
@@ -1627,6 +1640,17 @@ addEventListener('resize', () => {
   if (mode === 'edit' && widthChanged) { render(); drawWave(); }
 });
 
+/* the toolbar (#editor) has no positioned ancestor, so it's laid out against
+   the document itself, not clipped to the viewport like #notebar is. iOS/
+   Android scroll the whole page to keep a focused input clear of the
+   on-screen keyboard — in portrait, where the keyboard eats most of the
+   screen height, that drags the toolbar off the top entirely. Nothing here
+   is meant to scroll (#tlwrap scrolls internally), so snap any such scroll
+   straight back. */
+const pinScroll = () => { if (scrollX || scrollY) scrollTo(0, 0); };
+addEventListener('scroll', pinScroll, { passive: true });
+if (window.visualViewport) visualViewport.addEventListener('resize', pinScroll);
+
 function ripple(x, y, st) {
   /* stamp against the frame clock: a pointer event can read a time later than
      the next rAF timestamp, which would make the ripple's age negative */
@@ -2161,12 +2185,47 @@ function blockEl(bk, fill, L, top, h) {
   b.addEventListener('dblclick', e => { e.stopPropagation(); editBlock(b, bk); });
   b.addEventListener('pointerdown', e => {
     e.stopPropagation();
+    hideBlockMenu();
     select(b);
     if (e.target === gl) return resizeBlock(e, bk, b, null, 'l');
     if (e.target === gr) return resizeBlock(e, bk, b, null, 'r');
+    /* hold without dragging to bring up a delete option — the only way to
+       remove a note on a device with no Delete key */
+    const sx = e.clientX, sy = e.clientY;
+    const lp = setTimeout(() => { b.classList.remove('holding'); showBlockMenu(b, bk.id); }, 550);
+    b.classList.add('holding');
+    const cancel = () => {
+      clearTimeout(lp); b.classList.remove('holding');
+      removeEventListener('pointermove', mv); removeEventListener('pointerup', cancel); removeEventListener('pointercancel', cancel);
+    };
+    const mv = m => { if (Math.hypot(m.clientX - sx, m.clientY - sy) > 6) cancel(); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', cancel); addEventListener('pointercancel', cancel);
     moveBlock(e, bk, b, null);
   });
   return b;
+}
+function showBlockMenu(b, id) {
+  const menu = $('#blockMenu');
+  menu.innerHTML = '';
+  const del = el('button'); del.textContent = 'Delete note';
+  del.onclick = e => { e.stopPropagation(); hideBlockMenu(); deleteBlock(id); };
+  menu.appendChild(del);
+  menu.classList.add('on');
+  const r = b.getBoundingClientRect(), mr = menu.getBoundingClientRect();
+  menu.style.left = clamp(r.left + r.width / 2 - mr.width / 2, 8, innerWidth - mr.width - 8) + 'px';
+  const above = r.top - mr.height - 8;
+  menu.style.top = (above > 8 ? above : r.bottom + 8) + 'px';
+}
+function hideBlockMenu() { $('#blockMenu').classList.remove('on'); }
+addEventListener('pointerdown', e => { if (!e.target.closest('#blockMenu')) hideBlockMenu(); });
+function deleteBlock(id) {
+  const [tr] = findBlock(id);
+  if (!tr) return;
+  pushUndo('a note');
+  tr.blocks = tr.blocks.filter(b => b.id !== id);
+  if (sel && sel.dataset.id === id) sel = null;
+  render(); save();
+  logHist(lib.current, 'Removed a note on ' + tr.name);
 }
 function setPh(off) {
   phOff = off;
@@ -2723,11 +2782,7 @@ addEventListener('keydown', e => {
     if (selMarker === 0) { toast('The first cut is the start point'); return; }
     if (phSel) { setPh(true); return; }
     if (sel) {
-      const [tr] = findBlock(sel.dataset.id);
-      if (tr) {
-        pushUndo('a note'); tr.blocks = tr.blocks.filter(b => b.id !== sel.dataset.id); sel = null; render(); save();
-        logHist(lib.current, 'Removed a note on ' + tr.name);
-      }
+      deleteBlock(sel.dataset.id);
       return;
     }
   }
