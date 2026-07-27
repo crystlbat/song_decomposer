@@ -268,6 +268,10 @@ body:not(.editing) .drop .edit-only{display:none}
 }
 .marker u:hover{transform:rotate(45deg) scale(1.35)}
 .marker.sel u{transform:rotate(45deg) scale(1.35);box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+.marker.fresh i{background:linear-gradient(180deg,var(--live),rgba(232,201,155,.18))}
+.marker.fresh u{background:var(--live);animation:freshPulse 1.1s ease-in-out infinite}
+@keyframes freshPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,201,155,.55)}50%{box-shadow:0 0 0 5px rgba(232,201,155,0)}}
+@media (prefers-reduced-motion:reduce){.marker.fresh u{animation:none}}
 .mk-line{position:absolute;top:0;bottom:0;width:1px;background:rgba(143,166,255,.13);pointer-events:none;z-index:1}
 
 /* ── lanes ──────────────────────────────────────────── */
@@ -792,6 +796,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div class="mini" id="miniNew"><b>new take</b></div>
   <div class="take-actions">
     <button class="btn ghost" id="discardTake">Discard new take</button>
+    <button class="btn" id="mergeTake" title="Combine both sets of cuts — close duplicates are dropped">Merge both</button>
     <button class="btn key" id="keepTake">Keep new take</button>
   </div>
 </div>
@@ -938,6 +943,7 @@ let armedKey = null;      // track that catches typed notes
 let noteOpen = false, noteTarget = null, noteLocked = false;
 let liveMode = false, snapMode = 'section';
 let pendingTake = null;
+let freshMarkers = [];   /* cut times to briefly highlight after a merge */
 let peaks = null;
 
 const $ = s => document.querySelector(s);
@@ -1816,6 +1822,25 @@ $('#discardTake').onclick = () => {
   pendingTake = null; P.takeNum--; $('#takebar').classList.remove('on'); render();
   toast('Take discarded');
 };
+$('#mergeTake').onclick = () => {
+  pushUndo('the old take');
+  const NEAR = .5;                 /* cuts closer than this to an existing one are treated as the same cut */
+  const merged = P.markers.slice();
+  const added = [];
+  pendingTake.forEach(t => {
+    if (!merged.some(m => Math.abs(m - t) < NEAR)) { merged.push(t); added.push(t); }
+  });
+  merged.sort((a, b) => a - b);
+  P.markers = merged;
+  recalc();
+  pendingTake = null; $('#takebar').classList.remove('on'); fit(); render(); save();
+  logHist(lib.current, 'Merged take ' + P.takeNum + ' — added ' + added.length + (added.length === 1 ? ' cut' : ' cuts'));
+  toast(added.length ? 'Merged — ' + added.length + ' new ' + (added.length === 1 ? 'cut' : 'cuts') : 'Merged — nothing new to add');
+  if (added.length) {
+    freshMarkers = added; render();
+    setTimeout(() => { freshMarkers = []; render(); }, 2600);
+  }
+};
 
 /* ═══ tracks & blocks ═════════════════════════════════ */
 function migrate(o) {
@@ -1979,6 +2004,7 @@ function render() {
   P.markers.forEach((t, i) => {
     const mk = el('div', 'marker'); mk.style.left = t2x(t) + 'px';
     if (i === selMarker) mk.classList.add('sel');
+    if (freshMarkers.some(f => Math.abs(f - t) < .05)) mk.classList.add('fresh');
     const bar = el('i'), hd = el('u');
     hd.title = 'drag to nudge · double-click or Del to remove';
     hd.addEventListener('pointerdown', ev => {
