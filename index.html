@@ -885,6 +885,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button class="btn" id="scNew">New scene</button>
     <button class="btn" id="scImport">Import file</button>
     <button class="btn" id="scPasteToggle">Paste scene</button>
+    <button class="btn ghost" id="scTutorial" title="Add the guided walkthrough scene back to your list">Tutorial</button>
   </div>
   <div id="scPasteWrap">
     <textarea id="scPaste" placeholder="paste an exported scene here" spellcheck="false"></textarea>
@@ -1547,6 +1548,15 @@ $('#hNew').onclick = () => freshScene();
 $('#hScenes').onclick = () => go('library');
 $('#hContinue').onclick = () => go(P.markers.length ? 'edit' : 'capture');
 $('#scImport').onclick = () => $('#jsonIn').click();
+$('#scTutorial').onclick = () => {
+  const sc = tutorialScene();
+  lib.scenes.unshift(sc);
+  store.set(LIBKEY, lib);
+  loadScene(sc);
+  renderScenes();
+  syncSoon();
+  toast('Tutorial scene added');
+};
 $('#scPasteToggle').onclick = () => $('#scPasteWrap').classList.toggle('on');
 $('#scPasteGo').onclick = () => {
   try {
