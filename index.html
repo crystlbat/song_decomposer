@@ -404,6 +404,7 @@ body.live #notebar::before{content:'';position:absolute;left:0;right:0;top:0;hei
 }
 #noteInput::placeholder{color:var(--faint);font-weight:400}
 .nb-hint{flex:none;font-family:var(--ui);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+#nbTab{display:none;flex:none;font-family:var(--ui);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:rgba(255,255,255,.05)}
 
 /* ── take compare ───────────────────────────────────── */
 #takebar{
@@ -665,6 +666,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .chip{height:38px;padding:0 14px}
   .arm{width:18px;height:18px}
   .nb-hint{display:none}
+  #nbTab{display:flex}
   .addtrack{padding:22px 16px}
 }
 @media (max-width:1180px){:root{--side-w:176px}}
@@ -811,6 +813,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
   <div class="nb-row">
     <input id="noteInput" placeholder="what just happened…" autocomplete="off">
+    <button id="nbTab" title="Switch to next track">tab ⇥</button>
     <span class="nb-hint"><kbd>enter</kbd> place · <kbd>tab</kbd> track · <kbd>esc</kbd> stop</span>
   </div>
 </div>
@@ -1613,7 +1616,16 @@ function sizeCanvas() {
   W = cv.clientWidth; H = cv.clientHeight;
   cv.width = W * d; cv.height = H * d; cx.setTransform(d, 0, 0, d, 0, 0);
 }
-addEventListener('resize', () => { sizeCanvas(); if (mode === 'edit') { render(); drawWave(); } });
+let lastResizeW = innerWidth;
+addEventListener('resize', () => {
+  const w = innerWidth, widthChanged = w !== lastResizeW;
+  lastResizeW = w;
+  sizeCanvas();
+  /* a tablet's on-screen keyboard opening/closing fires resize with only the
+     height changing — rebuilding the timeline then would blow away whatever
+     input the keyboard is for, closing it again and looping into a flicker */
+  if (mode === 'edit' && widthChanged) { render(); drawWave(); }
+});
 
 function ripple(x, y, st) {
   /* stamp against the frame clock: a pointer event can read a time later than
@@ -2667,6 +2679,11 @@ $('#noteInput').addEventListener('keydown', e => {
   else if (e.key === 'Escape') { e.preventDefault(); liveMode ? setLive(false) : closeNote(); }
   else if (e.key === 'Tab') { e.preventDefault(); armStep(e.shiftKey ? -1 : 1); }
 });
+/* touch devices have no Tab key and the kbd hint is hidden on them —
+   give them a real button, and keep the input focused through the tap so
+   the on-screen keyboard doesn't close and reopen */
+$('#nbTab').addEventListener('pointerdown', e => e.preventDefault());
+$('#nbTab').addEventListener('click', () => armStep(1));
 
 /* ═══ keys ════════════════════════════════════════════ */
 addEventListener('keydown', e => {
