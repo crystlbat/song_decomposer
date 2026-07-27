@@ -51,7 +51,16 @@ Your scenes live in a single file (`tapline-state.json`) in your own Google Driv
 2. Delete the placeholder, paste the code from the app (**Scenes → Connect Drive → "Where do I get that URL?" → Copy the code**), and save.
 3. **Deploy → New deployment → Web app.** Execute as *Me*, access *Anyone*. Authorise it.
 4. Copy the `/exec` URL it gives you.
-5. Paste that URL into **Scenes → Connect Drive** on every device you use.
+5. Paste that URL into **Scenes → Connect Drive** on the first device.
+
+### Pairing the rest (don't retype that URL)
+
+Typing a 120-character URL into a phone is miserable, so you only ever do it once. On the linked device open **Scenes → Connect Drive → Pair a device**: it shows a QR code and a one-tap link.
+
+- **Phone / tablet** — point the camera at the QR. Tapline opens already linked.
+- **Anything without a camera** — hit **Copy link**, send it to yourself, open it there.
+
+The link carries the script id in its URL hash; the receiving device links itself and then wipes the hash from its address bar so the credential isn't left in history. It only accepts a genuine `script.google.com/macros/s/…/exec` target.
 
 > [!WARNING]
 > **Treat your `/exec` URL as a password.** The deployment runs as you with access set to *Anyone*, so anyone who has the URL can read and overwrite everything in your `tapline-state.json` — there is no second check. Don't commit it, paste it in an issue, or share it in a screenshot. If it leaks, open the Apps Script project and **Deploy → Manage deployments → Archive** the old deployment, then create a new one; the old URL stops working immediately.

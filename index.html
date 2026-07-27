@@ -639,6 +639,24 @@ body.admin-mode #syncBtn{display:flex}
 @media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
 
+/* ── pairing ────────────────────────────────────────── */
+.pair-in{max-width:520px;margin:0 auto;padding:min(8vh,56px) 22px 48px;text-align:center}
+.pr-qr{
+  display:inline-block;padding:16px;border-radius:16px;background:#fff;line-height:0;
+  box-shadow:0 18px 50px rgba(0,0,0,.5);margin:6px 0 18px;
+}
+.pr-qr canvas{display:block;width:min(280px,64vw);height:auto;image-rendering:pixelated}
+.pr-step{margin:0 0 20px;color:var(--dim);font-size:14px;line-height:1.6}
+.pr-step b{color:var(--text);font-weight:600}
+.pr-link{
+  width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);
+  color:var(--dim);font-family:var(--mono);font-size:10px;word-break:break-all;text-align:left;
+  max-height:74px;overflow:auto;
+}
+.pr-acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.pr-warn{margin:18px 0 0;font-size:12px;line-height:1.55;color:var(--faint)}
+.pr-warn b{color:var(--live);font-weight:600}
+
 /* ── send: the whole phone/walkman flow in one screen ── */
 .send-in{max-width:520px;margin:0 auto;padding:min(9vh,64px) 22px 48px;display:flex;flex-direction:column;gap:18px}
 .sd-card{
@@ -990,6 +1008,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <span class="spacer"></span>
       <button class="btn key" id="dpPull">Pull</button>
       <button class="btn" id="dpPush">Push</button>
+      <button class="btn" id="dpPair">Pair a device</button>
       <button class="btn ghost" id="dpLogs">Sync log</button>
       <button class="btn ghost" id="dpOut">Unlink</button>
     </div>
@@ -1040,6 +1059,21 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <div class="krow"><kbd>+ −</kbd><span>zoom · pinch on a tablet</span></div>
     <div class="krow"><kbd>esc</kbd><span>back a screen</span></div>
     <button class="btn" id="keysClose">close</button>
+  </div>
+</div>
+
+<div id="pair" class="page">
+  <div class="pair-in">
+    <span class="eyebrow">pair a device</span>
+    <p class="pr-step">Point the other device's camera at this. It opens Tapline already linked — nothing to type.</p>
+    <div class="pr-qr"><canvas id="prQr"></canvas></div>
+    <p class="pr-step" id="prNote">Or send yourself this link and open it on the other device:</p>
+    <div class="pr-link" id="prLink">—</div>
+    <div class="pr-acts">
+      <button class="btn key" id="prCopy">Copy link</button>
+      <button class="btn" id="prClose">Done</button>
+    </div>
+    <p class="pr-warn"><b>Treat this link like a password.</b> Anyone who has it can read and change everything in your Drive file.</p>
   </div>
 </div>
 
@@ -1231,6 +1265,249 @@ $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
 };
+
+/* ═══ pairing ═════════════════════════════════════════════════════════
+   Typing a 120-character Apps Script URL into a phone or a walkman is
+   miserable, so the laptop shows a QR of a link that carries the URL in
+   its hash: scan it, the app opens already linked. Minimal QR encoder —
+   byte mode, ECC L, versions 1..10 (up to 271 chars). Verified against a
+   reference decoder across every version boundary. */
+function qrMatrix(text) {
+  const EC = {                       /* [dataCodewords, ecPerBlock, g1Blocks, g2Blocks] */
+    1:[19,7,1,0], 2:[34,10,1,0], 3:[55,15,1,0], 4:[80,20,1,0], 5:[108,26,1,0],
+    6:[136,18,2,0], 7:[156,20,2,0], 8:[194,24,2,0], 9:[232,30,2,0], 10:[274,18,2,2]
+  };
+  const ALIGN = {1:[],2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50]};
+
+  const data = [];
+  for (const ch of text) {           /* utf-8 */
+    const c = ch.codePointAt(0);
+    if (c < 0x80) data.push(c);
+    else if (c < 0x800) data.push(0xC0 | c >> 6, 0x80 | c & 63);
+    else if (c < 0x10000) data.push(0xE0 | c >> 12, 0x80 | (c >> 6 & 63), 0x80 | c & 63);
+    else data.push(0xF0 | c >> 18, 0x80 | (c >> 12 & 63), 0x80 | (c >> 6 & 63), 0x80 | c & 63);
+  }
+
+  let ver = 0;
+  for (let v = 1; v <= 10; v++) {
+    const cc = v < 10 ? 8 : 16;
+    if (4 + cc + 8 * data.length <= EC[v][0] * 8) { ver = v; break; }
+  }
+  if (!ver) throw new Error('too long for a small QR');
+  const [dcw, ecw, g1, g2] = EC[ver];
+  const ccBits = ver < 10 ? 8 : 16;
+
+  /* ── bit stream ─────────────────────────────────────── */
+  const bits = [];
+  const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push(val >> i & 1); };
+  put(4, 4); put(data.length, ccBits);
+  data.forEach(b => put(b, 8));
+  for (let i = 0; i < 4 && bits.length < dcw * 8; i++) bits.push(0);
+  while (bits.length % 8) bits.push(0);
+  const bytes = [];
+  for (let i = 0; i < bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8).join(''), 2));
+  const PAD = [0xEC, 0x11];
+  for (let i = 0; bytes.length < dcw; i++) bytes.push(PAD[i % 2]);
+
+  /* ── GF(256) + Reed-Solomon ─────────────────────────── */
+  const EXP = new Array(512), LOG = new Array(256);
+  for (let i = 0, x = 1; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11D; }
+  for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  const mul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+  function genPoly(n) {
+    let p = [1];
+    for (let i = 0; i < n; i++) {
+      const q = [1, EXP[i]], r = new Array(p.length + 1).fill(0);
+      for (let a = 0; a < p.length; a++) for (let b = 0; b < 2; b++) r[a + b] ^= mul(p[a], q[b]);
+      p = r;
+    }
+    return p;
+  }
+  const gen = genPoly(ecw);
+  function ecOf(block) {
+    const r = block.concat(new Array(ecw).fill(0));
+    for (let i = 0; i < block.length; i++) {
+      const f = r[i]; if (!f) continue;
+      for (let j = 0; j < gen.length; j++) r[i + j] ^= mul(gen[j], f);
+    }
+    return r.slice(block.length);
+  }
+
+  /* ── split into blocks, interleave ──────────────────── */
+  const nBlocks = g1 + g2, short = Math.floor(dcw / nBlocks);
+  const blocks = [], ecs = [];
+  let off = 0;
+  for (let i = 0; i < nBlocks; i++) {
+    const len = short + (i >= g1 ? 1 : 0);
+    const b = bytes.slice(off, off + len); off += len;
+    blocks.push(b); ecs.push(ecOf(b));
+  }
+  const out = [];
+  const maxLen = Math.max(...blocks.map(b => b.length));
+  for (let i = 0; i < maxLen; i++) blocks.forEach(b => { if (i < b.length) out.push(b[i]); });
+  for (let i = 0; i < ecw; i++) ecs.forEach(e => out.push(e[i]));
+
+  /* ── matrix ─────────────────────────────────────────── */
+  const N = 17 + ver * 4;
+  const m = Array.from({ length: N }, () => new Array(N).fill(null));   /* null = free */
+  const set = (r, c, v) => { if (r >= 0 && r < N && c >= 0 && c < N) m[r][c] = v; };
+
+  const finder = (r, c) => {
+    for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++) {
+      const inRing = (i === 0 || i === 6) && j >= 0 && j <= 6 || (j === 0 || j === 6) && i >= 0 && i <= 6;
+      const inCore = i >= 2 && i <= 4 && j >= 2 && j <= 4;
+      set(r + i, c + j, inRing || inCore ? 1 : 0);
+    }
+  };
+  finder(0, 0); finder(0, N - 7); finder(N - 7, 0);
+
+  ALIGN[ver].forEach(r => ALIGN[ver].forEach(c => {
+    if ((r < 9 && c < 9) || (r < 9 && c > N - 10) || (r > N - 10 && c < 9)) return;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++)
+      set(r + i, c + j, Math.max(Math.abs(i), Math.abs(j)) !== 1 ? 1 : 0);
+  }));
+
+  for (let i = 8; i < N - 8; i++) { const v = i % 2 ? 0 : 1; set(6, i, v); set(i, 6, v); }
+  set(N - 8, 8, 1);                                    /* dark module */
+
+  /* every module the mask must not touch: patterns already drawn, plus the
+     format/version areas reserved below */
+  const reserved = Array.from({ length: N }, () => new Array(N).fill(false));
+  const func = Array.from({ length: N }, (_, r) => m[r].map(v => v !== null));
+  for (let i = 0; i < 9; i++) { reserved[8][i] = reserved[i][8] = true; }
+  for (let i = 0; i < 8; i++) { reserved[8][N - 1 - i] = reserved[N - 1 - i][8] = true; }
+  if (ver >= 7) for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) {
+    reserved[i][N - 11 + j] = true; reserved[N - 11 + j][i] = true;
+  }
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (reserved[r][c]) func[r][c] = true;
+
+  /* ── place data, zigzag from bottom-right ───────────── */
+  let bi = 0, up = true;
+  const bitAt = k => k < out.length * 8 ? (out[k >> 3] >> (7 - (k & 7))) & 1 : 0;
+  for (let col = N - 1; col > 0; col -= 2) {
+    if (col === 6) col--;
+    for (let n = 0; n < N; n++) {
+      const row = up ? N - 1 - n : n;
+      for (let k = 0; k < 2; k++) {
+        const c = col - k;
+        if (m[row][c] !== null || reserved[row][c]) continue;
+        m[row][c] = bitAt(bi++);
+      }
+    }
+    up = !up;
+  }
+
+  /* ── masking ────────────────────────────────────────── */
+  const MASK = [
+    (r, c) => (r + c) % 2 === 0, (r, c) => r % 2 === 0, (r, c) => c % 3 === 0,
+    (r, c) => (r + c) % 3 === 0, (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+    (r, c) => (r * c) % 2 + (r * c) % 3 === 0, (r, c) => ((r * c) % 2 + (r * c) % 3) % 2 === 0,
+    (r, c) => ((r + c) % 2 + (r * c) % 3) % 2 === 0
+  ];
+  const fmtBits = mask => {
+    const d = (0b01 << 3) | mask;          /* ECC L = 01, then the 3 mask bits */
+    let v = d << 10;
+    for (let i = 4; i >= 0; i--) if (v >> (10 + i) & 1) v ^= 0x537 << i;
+    return ((d << 10) | v) ^ 0x5412;
+  };
+  const verBits = () => {
+    let v = ver << 12;
+    for (let i = 5; i >= 0; i--) if (v >> (12 + i) & 1) v ^= 0x1F25 << i;
+    return (ver << 12) | v;
+  };
+
+  function penalty(g) {
+    let p = 0;
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      if (c < N - 1 && r < N - 1 && g[r][c] === g[r][c+1] && g[r][c] === g[r+1][c] && g[r][c] === g[r+1][c+1]) p += 3;
+    }
+    const runs = line => {
+      let p2 = 0, run = 1;
+      for (let i = 1; i < N; i++) {
+        if (line[i] === line[i-1]) { run++; if (run === 5) p2 += 3; else if (run > 5) p2++; }
+        else run = 1;
+      }
+      return p2;
+    };
+    for (let r = 0; r < N; r++) p += runs(g[r]);
+    for (let c = 0; c < N; c++) p += runs(g.map(row => row[c]));
+    let dark = 0; g.forEach(row => row.forEach(v => dark += v));
+    p += Math.floor(Math.abs(dark * 100 / (N * N) - 50) / 5) * 10;
+    return p;
+  }
+
+  let best = null, bestP = Infinity;
+  for (let mask = 0; mask < 8; mask++) {
+    const g = m.map(row => row.slice());
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+      if (!func[r][c] && MASK[mask](r, c)) g[r][c] ^= 1;
+
+    const f = fmtBits(mask);
+    for (let i = 0; i < 15; i++) {
+      const b = (f >> (14 - i)) & 1;   /* format info is placed MSB-first */
+      if (i < 6) g[8][i] = b; else if (i < 8) g[8][i + 1] = b; else if (i === 8) g[7][8] = b;
+      else g[14 - i][8] = b;
+      /* bits 0-6 run up the left column, 7-14 run along the top row;
+         (N-8,8) is the dark module and belongs to neither */
+      if (i < 7) g[N - 1 - i][8] = b; else g[8][N - 15 + i] = b;
+    }
+    g[N - 8][8] = 1;
+    if (ver >= 7) {
+      const vb = verBits();
+      for (let i = 0; i < 18; i++) {
+        const b = (vb >> i) & 1, r = Math.floor(i / 3), c = i % 3;
+        g[r][N - 11 + c] = b; g[N - 11 + c][r] = b;
+      }
+    }
+    const p = penalty(g);
+    if (p < bestP) { bestP = p; best = g; }
+  }
+  return best;
+}
+
+/* An Apps Script URL is always .../macros/s/<id>/exec, so sending just the
+   id keeps the QR small enough to scan on a cheap camera. Anything that
+   doesn't match that shape falls back to carrying the whole URL. */
+const EXEC_RE = /^https:\/\/script\.google\.com\/macros\/s\/([\w-]+)\/exec/;
+function pairLink() {
+  if (!drv.url) return '';
+  const base = location.origin + location.pathname;
+  const m = EXEC_RE.exec(drv.url);
+  return base + (m ? '#s=' + m[1] : '#u=' + encodeURIComponent(drv.url));
+}
+/* Consumed before anything paints, then wiped from the address bar so the
+   credential isn't left sitting in history or a screenshot. */
+function consumePairHash() {
+  const h = location.hash || '';
+  const s = /^#s=([\w-]+)$/.exec(h), u = /^#u=(.+)$/.exec(h);
+  if (!s && !u) return false;
+  const url = s ? 'https://script.google.com/macros/s/' + s[1] + '/exec' : decodeURIComponent(u[1]);
+  if (!EXEC_RE.test(url)) return false;
+  drv.url = url; drv.on = true; lastErr = ''; saveDrv();
+  try { history.replaceState(null, '', location.origin + location.pathname); } catch (e) { location.hash = ''; }
+  slog('info', 'paired from a link', url.slice(0, 60) + '…');
+  return true;
+}
+function drawQR(text, cv) {
+  const m = qrMatrix(text), N = m.length, px = 4;
+  cv.width = cv.height = N * px;
+  const cx2 = cv.getContext('2d');
+  cx2.fillStyle = '#fff'; cx2.fillRect(0, 0, cv.width, cv.height);
+  cx2.fillStyle = '#000';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (m[r][c]) cx2.fillRect(c * px, r * px, px, px);
+}
+function openPair() {
+  if (!drv.on || !drv.url) { toast('Link this device to Drive first'); return; }
+  const link = pairLink();
+  $('#prLink').textContent = link;
+  try { drawQR(link, $('#prQr')); $('#prQr').style.display = 'block'; }
+  catch (e) { $('#prQr').style.display = 'none'; slog('err', 'could not draw the pairing QR', e.message); }
+  $('#pair').classList.add('on');
+}
+$('#prClose').onclick = () => $('#pair').classList.remove('on');
+$('#pair').onclick = e => { if (e.target.id === 'pair') $('#pair').classList.remove('on'); };
+$('#prCopy').onclick = () => navigator.clipboard.writeText(pairLink())
+  .then(() => toast('link copied — send it to the other device'), () => toast('copy blocked by the browser'));
 
 /* ═══ compact capture — phone, walkman, anything small ═════════════════
    On a small screen the timeline editor is unusable, but capturing cuts
@@ -2003,6 +2280,7 @@ $('#dpConnect').onclick = async () => {
 $('#dpPull').onclick = drivePull;
 $('#dpPush').onclick = drivePush;
 $('#dpLogs').onclick = openLogs;
+$('#dpPair').onclick = openPair;
 $('#dpOut').onclick = () => { drv.on = false; saveDrv(); paintDrive(); toast('unlinked — still saved on this device'); };
 
 const visibleScenes = () => lib.scenes.filter(x => !x.deleted);
@@ -3364,6 +3642,7 @@ $('#nbTab').addEventListener('click', () => armStep(1));
 addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
   if (e.key === 'Escape') {
+    if ($('#pair').classList.contains('on')) { $('#pair').classList.remove('on'); return; }
     if ($('#inbox').classList.contains('on')) { closeInbox(); return; }
     if ($('#logs').classList.contains('on')) { $('#logs').classList.remove('on'); return; }
     if ($('#keys').classList.contains('on')) { $('#keys').classList.remove('on'); return; }
@@ -3556,8 +3835,11 @@ addEventListener('resize', syncTopbar);
 
   const cfg = await store.get(DKEY);
   if (cfg) { drv.url = cfg.url || ''; drv.on = !!cfg.on && !!cfg.url; $('#dpId').value = drv.url; }
+  const paired = consumePairHash();
+  $('#dpId').value = drv.url;
   paintKind();
   paintDrive();
+  if (paired) toast('paired — pull to get your breakdowns');
   go('home');
   maybeSnapshot();
   /* No network on boot any more: startup is instant and offline-identical,
