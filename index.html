@@ -1414,7 +1414,7 @@ async function driveSync(quiet) {
     maybeSnapshot();
 
     paintSceneName(); paintDrive();
-    if (screen === 'library') renderScenes();
+    if (screen === 'library') renderScenesIfIdle();
     if (screen === 'home') paintHome();
     if (!quiet) toast('synced · ' + lib.scenes.length + (lib.scenes.length === 1 ? ' scene' : ' scenes') + ' in drive');
   } catch (e) {
@@ -1494,6 +1494,21 @@ const ICON_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" c
 
 function closeAllDrops() { document.querySelectorAll('.sc-drop.on').forEach(d => d.classList.remove('on')); }
 document.addEventListener('click', e => { if (!e.target.closest('.sc-menu')) closeAllDrops(); });
+
+/* renderScenes() rebuilds every card from scratch, so a background sync
+   landing mid-interaction would blow away a half-typed rename, an open menu
+   or an expanded history. The incoming data is not urgent — hold the repaint
+   until the user is done rather than pulling the cards out from under them. */
+const scenesBusy = () => !!document.querySelector('.sc-card.editing, .sc-card.hist-open, .sc-drop.on');
+let scenesStale = false;
+function renderScenesIfIdle() {
+  if (scenesBusy()) { scenesStale = true; return; }
+  scenesStale = false; renderScenes();
+}
+document.addEventListener('focusout', e => {
+  if (!scenesStale || screen !== 'library') return;
+  setTimeout(() => { if (scenesStale && !scenesBusy()) renderScenesIfIdle(); }, 0);
+});
 
 function renderScenes() {
   const box = $('#scList'); if (!box) return;
@@ -3014,7 +3029,14 @@ addEventListener('resize', syncTopbar);
   paintDrive();
   go('home');
   maybeSnapshot();
-  if (drv.on) { await driveSync(true); tidyBlank(); go('home'); }
+  /* This round trip takes seconds against Apps Script, and the app is fully
+     usable throughout — tapping Scenes during it is normal. Re-asserting the
+     landing screen afterwards would yank the user out of wherever they went
+     and make them click back in, so only tidy up if they never left home. */
+  if (drv.on) {
+    await driveSync(true);
+    if (screen === 'home') { tidyBlank(); if (screen === 'home') paintHome(); }
+  }
 })();
 </script>
 </body>
