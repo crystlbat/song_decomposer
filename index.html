@@ -151,6 +151,7 @@ body.editing #top{display:none}
 }
 .drop button:hover{background:rgba(255,255,255,.06);color:var(--text)}
 .drop button.danger:hover{color:var(--play)}
+#mRestoreWhen{font-family:var(--mono);font-size:9px;letter-spacing:0;text-transform:none;color:var(--faint);margin-left:8px}
 .drop hr{border:none;border-top:1px solid var(--line);margin:5px 9px}
 body:not(.editing) .drop .edit-only{display:none}
 
@@ -724,6 +725,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="mCopy">Copy as text</button>
     <button id="mCsv">Export .csv</button>
     <hr>
+    <button id="mRestore">Restore backup<span id="mRestoreWhen"></span></button>
+    <hr>
     <button id="mReset" class="danger">New scene</button>
   </div>
 </div>
@@ -988,7 +991,7 @@ function paintAdmin() {
 addEventListener('hashchange', paintAdmin);
 
 /* ═══ storage ═════════════════════════════════════════ */
-const OLDKEY = 'tapline.project', LIBKEY = 'tapline.scenes';
+const OLDKEY = 'tapline.project', LIBKEY = 'tapline.scenes', BAKKEY = 'tapline.backups';
 const store = {
   async get(k) {
     try { if (window.storage) { const r = await window.storage.get(k, false); return r ? JSON.parse(r.value) : null; } } catch (e) {}
@@ -1082,8 +1085,31 @@ function save() {
   const sc = curScene();
   if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
   clearTimeout(saveT);
-  saveT = setTimeout(() => { store.set(LIBKEY, lib); syncSoon(); }, 400);
+  saveT = setTimeout(() => { store.set(LIBKEY, lib); syncSoon(); maybeSnapshot(); }, 400);
   paintSceneName();
+}
+/* a tablet backgrounding the page can suspend or reload it before the 400ms
+   debounce above ever fires, silently dropping whatever was just captured —
+   flush straight to disk (bypassing the debounce) the moment the app is
+   about to lose the CPU, instead of trusting a timer to survive that */
+function flushSave() {
+  clearTimeout(saveT);
+  const sc = curScene(); if (sc) { sc.data = sceneData(); sc.updated = Date.now(); if (sc.deleted) sc.deleted = false; }
+  try { localStorage.setItem(LIBKEY, JSON.stringify(lib)); } catch (e) {}
+  store.set(LIBKEY, lib);
+  maybeSnapshot();
+}
+/* a rolling, purely-local set of full snapshots — independent of Drive sync —
+   so a bad merge or a corrupted write to LIBKEY is still recoverable */
+let lastSnapshotAt = 0;
+async function maybeSnapshot() {
+  const now = Date.now();
+  if (now - lastSnapshotAt < 60000) return;
+  lastSnapshotAt = now;
+  const backups = (await store.get(BAKKEY)) || [];
+  backups.push({ ts: now, lib: JSON.parse(JSON.stringify(lib)) });
+  while (backups.length > 8) backups.shift();
+  store.set(BAKKEY, backups);
 }
 function paintSceneName() {
   const sc = curScene();
@@ -1319,7 +1345,18 @@ function tidyBlank() {
   if (next) loadScene(next);
 }
 
-/* one round trip does both directions: we send ours, the file sends back everything merged */
+/* newest-updated wins per scene id — the same rule the Apps Script merge()
+   uses server-side. Applying it again here (instead of trusting the response
+   as gospel) protects any edit made locally while a round trip was in
+   flight: a slow request can take several seconds, plenty of time to
+   capture more cuts, and a reply describing the world as of when the
+   request was *sent* must never stomp on something newer than that. */
+function mergeScenes(localScenes, incoming) {
+  const m = {};
+  localScenes.forEach(s => { m[s.id] = s; });
+  incoming.forEach(s => { const p = m[s.id]; if (!p || (s.updated || 0) >= (p.updated || 0)) m[s.id] = s; });
+  return Object.keys(m).map(k => m[k]);
+}
 let syncing = false, lastErr = '', lastMoan = 0;
 async function driveSync(quiet) {
   if (!drv.on || !drv.url || syncing) return;
@@ -1337,9 +1374,11 @@ async function driveSync(quiet) {
        touches the live editor (P), reassigns the current scene, or navigates.
        Whatever you're looking at stays exactly as it is; the fresh data is
        just there waiting the next time you open Scenes or reload. */
-    lib.scenes = merged.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+    const incoming = merged.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+    lib.scenes = mergeScenes(lib.scenes, incoming);
     lastErr = ''; drv.last = Date.now(); saveDrv();
     store.set(LIBKEY, lib);
+    maybeSnapshot();
 
     paintSceneName(); paintDrive();
     if (screen === 'library') renderScenes();
@@ -1359,7 +1398,11 @@ const syncSoon = () => { if (!drv.on) return; clearTimeout(syncT); syncT = setTi
 
 /* keep pulling in the background so the other device's edits arrive on their own */
 setInterval(() => { if (drv.on && !document.hidden && !syncing) driveSync(true); }, 25000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) driveSync(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { flushSave(); if (drv.on) driveSync(true); }
+  else driveSync(true);
+});
+addEventListener('pagehide', flushSave);
 addEventListener('focus', () => driveSync(true));
 addEventListener('online', () => driveSync(true));
 function saveDrv() { store.set(DKEY, { url: drv.url, on: drv.on }); }
@@ -2800,8 +2843,40 @@ addEventListener('keydown', e => {
 });
 
 /* ═══ menu / io ═══════════════════════════════════════ */
-$('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').classList.toggle('open'); };
+async function paintRestoreMenu() {
+  const backups = (await store.get(BAKKEY)) || [];
+  const last = backups[backups.length - 1];
+  $('#mRestoreWhen').textContent = last ? '· ' + fmtWhen(last.ts) : '· none yet';
+}
+$('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').classList.toggle('open'); paintRestoreMenu(); };
 addEventListener('click', () => $('#menu').classList.remove('open'));
+$('#mRestore').onclick = async e => {
+  e.stopPropagation();
+  const backups = (await store.get(BAKKEY)) || [];
+  if (!backups.length) { toast('No local backups yet'); return; }
+  const last = backups[backups.length - 1];
+  const btn = $('#mRestore');
+  if (!btn._armed) {
+    btn._armed = true;
+    toast('restore the version from ' + fmtWhen(last.ts) + '? click again');
+    setTimeout(() => { btn._armed = false; }, 2800);
+    return;
+  }
+  btn._armed = false;
+  pushUndo('restoring a backup');
+  lib = JSON.parse(JSON.stringify(last.lib));
+  if (!curScene() || curScene().deleted) lib.current = (visibleScenes()[0] || lib.scenes[0] || {}).id;
+  const sc = curScene();
+  if (sc) Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
+  armedKey = null; playPos = 0; lastPos = 0; selMarker = -1; sel = null;
+  if (noteOpen) closeNote();
+  if (liveMode) setLive(false);
+  paintSceneName();
+  $('#menu').classList.remove('open');
+  go(P.markers && P.markers.length ? 'edit' : 'home');
+  store.set(LIBKEY, lib); syncSoon();
+  toast('restored the version from ' + fmtWhen(last.ts));
+};
 $('#mExport').onclick = () => { save(); const sc = curScene(); if (sc) downloadScene(sc); };
 $('#mCopyScene').onclick = () => {
   save(); const sc = curScene(); if (!sc) return;
@@ -2885,6 +2960,7 @@ addEventListener('resize', syncTopbar);
   paintKind();
   paintDrive();
   go('home');
+  maybeSnapshot();
   if (drv.on) { await driveSync(true); tidyBlank(); go('home'); }
 })();
 </script>
