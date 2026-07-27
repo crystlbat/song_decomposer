@@ -639,6 +639,52 @@ body.admin-mode #syncBtn{display:flex}
 @media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
 
+/* ── inbox: what arrived, in plain language ─────────── */
+.inbox-in{max-width:760px;margin:0 auto;padding:min(9vh,70px) 24px 60px}
+.ib-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.ib-head .spacer{flex:1}
+.ib-sub{margin:0 0 18px;color:var(--dim);font-size:14px;line-height:1.55}
+.ib-msg{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:rgba(255,255,255,.02);overflow:hidden;transition:.15s}
+.ib-msg:hover{border-color:var(--line2)}
+.ib-msg.unread{background:rgba(143,166,255,.06);border-color:rgba(143,166,255,.3)}
+.ib-row{display:flex;align-items:center;gap:12px;padding:15px 16px;cursor:pointer;text-align:left;width:100%}
+.ib-dot{width:8px;height:8px;border-radius:50%;background:transparent;flex:none}
+.ib-msg.unread .ib-dot{background:var(--cut);box-shadow:0 0 10px var(--cut)}
+.ib-main{flex:1;min-width:0}
+.ib-name{font-family:var(--txt);font-size:16px;font-weight:600;letter-spacing:-.012em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ib-meta{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px}
+.ib-tag{
+  font-family:var(--ui);font-size:8.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:20px;border:1px solid currentColor;flex:none;
+}
+.ib-tag.new{color:var(--t3)}
+.ib-tag.updated{color:var(--cut)}
+.ib-tag.both{color:var(--live)}
+.ib-chev{color:var(--faint);font-size:11px;flex:none;transition:transform .18s}
+.ib-msg.open .ib-chev{transform:rotate(90deg)}
+.ib-detail{display:none;padding:0 16px 16px;border-top:1px solid var(--line)}
+.ib-msg.open .ib-detail{display:block}
+.ib-what{margin:14px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.ib-what b{color:var(--text);font-weight:600}
+.ib-diff{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ib-stat{
+  border:1px solid var(--line);border-radius:9px;padding:9px 13px;min-width:88px;
+  background:rgba(0,0,0,.22);
+}
+.ib-stat u{display:block;text-decoration:none;font-family:var(--ui);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.ib-stat b{font-family:var(--mono);font-size:15px;font-weight:400;color:var(--text);display:block;margin-top:4px}
+.ib-stat i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.ib-stat.up b{color:var(--t3)}
+.ib-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.ib-empty{padding:44px 20px;text-align:center;color:var(--faint)}
+.ib-empty b{display:block;font-family:var(--txt);font-size:17px;font-weight:600;color:var(--dim);margin-bottom:7px;letter-spacing:-.015em}
+.ib-empty span{font-size:13.5px}
+.ib-badge{
+  display:inline-block;min-width:18px;padding:1px 6px;border-radius:20px;background:var(--cut);color:var(--ink);
+  font-family:var(--ui);font-size:9.5px;font-weight:700;text-align:center;margin-left:8px;letter-spacing:0;
+}
+#hInbox b{display:flex;align-items:center}
+
 /* ── sync log ───────────────────────────────────────── */
 .logs-in{max-width:860px;margin:0 auto;padding:min(9vh,70px) 24px 60px}
 .log-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
@@ -878,6 +924,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button class="hero" id="hContinue"><b>Continue</b><span id="hContinueName">—</span></button>
       <button class="hero alt" id="hNew"><b>New breakdown</b><span>tap the cuts from scratch</span></button>
       <button class="hero alt" id="hScenes"><b>Scenes</b><span id="hScenesCount">—</span></button>
+      <button class="hero alt" id="hInbox"><b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span></button>
     </div>
     <div class="home-foot"><span id="hStore">stored on this device</span></div>
   </div>
@@ -888,6 +935,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button class="btn ghost" id="libBack">← home</button>
     <span class="sc-title">scenes</span>
     <span class="spacer"></span>
+    <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
     <button class="btn" id="driveBtn">Connect Drive</button>
   </div>
 
@@ -952,6 +1000,20 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <div class="krow"><kbd>+ −</kbd><span>zoom · pinch on a tablet</span></div>
     <div class="krow"><kbd>esc</kbd><span>back a screen</span></div>
     <button class="btn" id="keysClose">close</button>
+  </div>
+</div>
+
+<div id="inbox" class="page">
+  <div class="inbox-in">
+    <div class="ib-head">
+      <span class="eyebrow" style="margin-bottom:0">inbox</span>
+      <span class="spacer"></span>
+      <button class="btn key" id="ibPull">Check for new work</button>
+      <button class="btn ghost" id="ibReadAll">Mark all read</button>
+      <button class="btn" id="ibClose">Close</button>
+    </div>
+    <p class="ib-sub" id="ibSub">—</p>
+    <div id="ibList"></div>
   </div>
 </div>
 
@@ -1101,12 +1163,136 @@ function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
 $('#logsClose').onclick = () => $('#logs').classList.remove('on');
 $('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
 $('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
+$('#ibPull').onclick = () => { if (!drv.on) { closeInbox(); go('library'); $('#drivePanel').classList.add('on'); return toast('Link your Drive URL first'); } drivePull(); };
 $('#logPull').onclick = () => drivePull();
 $('#logPush').onclick = () => drivePush();
 $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
 };
+
+/* ═══ inbox — what a pull actually brought in ══════════════════════════
+   A pull used to be a number in a log. This turns each arrival into a
+   plain-language item you can open, read and act on, so "did my tablet
+   work make it across?" is answered by looking, not by counting bytes. */
+const INBOXKEY = 'tapline.inbox';
+let inbox = [];
+try { const raw = localStorage.getItem(INBOXKEY); if (raw) inbox = JSON.parse(raw) || []; } catch (e) {}
+const saveInbox = () => { try { localStorage.setItem(INBOXKEY, JSON.stringify(inbox)); } catch (e) {} };
+const unreadCount = () => inbox.filter(m => !m.read).length;
+
+function deliver(arrivals) {
+  if (!arrivals || !arrivals.length) return 0;
+  arrivals.forEach(a => inbox.unshift(Object.assign({ id: uid(), ts: Date.now(), read: false }, a)));
+  while (inbox.length > 60) inbox.pop();
+  saveInbox(); paintInboxBadges();
+  return arrivals.length;
+}
+function paintInboxBadges() {
+  const n = unreadCount();
+  /* the inbox only means anything once there is a second device to receive
+     from — keep it out of the way until Drive is linked */
+  const show = drv.on || inbox.length;
+  const hi = $('#hInbox'); if (hi) hi.style.display = show ? 'flex' : 'none';
+  const li = $('#libInbox'); if (li) li.style.display = show ? 'inline-block' : 'none';
+  [['#hInboxBadge', '#hInboxSub'], ['#libInboxBadge', null]].forEach(([bid, sid]) => {
+    const b = $(bid); if (!b) return;
+    b.style.display = n ? 'inline-block' : 'none';
+    b.textContent = n;
+    if (sid) { const s = $(sid); if (s) s.textContent = n ? n + (n === 1 ? ' new arrival' : ' new arrivals') : 'check for work from your other device'; }
+  });
+}
+const IB_COPY = {
+  new:     { tag: 'new', line: 'This breakdown was not on this device before. It came across whole — open it and carry on.' },
+  updated: { tag: 'updated', line: 'Your copy was behind, so it has been brought up to date. Nothing of yours was overwritten — you had no unsynced changes to this one.' },
+  both:    { tag: 'needs a look', line: 'This changed in both places since the last sync. <b>Your version is untouched.</b> The copy that arrived is saved next to it so you can compare and keep whichever is right.' }
+};
+function paintInbox() {
+  const box = $('#ibList'); if (!box) return;
+  const n = unreadCount();
+  $('#ibSub').textContent = !inbox.length
+    ? 'Anything that arrives from your other device shows up here.'
+    : n ? n + (n === 1 ? ' item needs your attention.' : ' items need your attention.') : 'All caught up.';
+  box.innerHTML = '';
+  if (!inbox.length) {
+    const e = el('div', 'ib-empty');
+    const b = el('b'); b.textContent = 'Nothing has arrived yet';
+    const s = el('span'); s.textContent = 'Hit “Check for new work” to see what your other device has pushed.';
+    e.append(b, s); box.appendChild(e); return;
+  }
+  inbox.forEach(m => {
+    const copy = IB_COPY[m.kind] || IB_COPY.new;
+    const msg = el('div', 'ib-msg' + (m.read ? '' : ' unread'));
+
+    const row = el('button', 'ib-row');
+    const dot = el('i', 'ib-dot');
+    const main = el('div', 'ib-main');
+    const nm = el('div', 'ib-name');
+    nm.append(document.createTextNode(m.name || 'Untitled'));
+    const tag = el('span', 'ib-tag ' + m.kind); tag.textContent = copy.tag; nm.appendChild(tag);
+    const meta = el('div', 'ib-meta');
+    meta.textContent = m.after.cuts + ' cuts · ' + m.after.tracks + ' tracks · ' + m.after.notes + ' notes · ' + fmtWhen(m.ts);
+    main.append(nm, meta);
+    const chev = el('span', 'ib-chev'); chev.textContent = '▸';
+    row.append(dot, main, chev);
+    row.onclick = () => {
+      const opening = !msg.classList.contains('open');
+      msg.classList.toggle('open', opening);
+      if (opening && !m.read) { m.read = true; msg.classList.remove('unread'); saveInbox(); paintInboxBadges(); paintInbox(); }
+    };
+
+    const det = el('div', 'ib-detail');
+    const what = el('p', 'ib-what'); what.innerHTML = copy.line;
+    det.appendChild(what);
+
+    /* before → after, so "what actually changed" is a glance not a guess */
+    if (m.before) {
+      const diff = el('div', 'ib-diff');
+      [['cuts', 'cuts'], ['tracks', 'tracks'], ['notes', 'notes']].forEach(([k, label]) => {
+        const s = el('div', 'ib-stat' + (m.after[k] > m.before[k] ? ' up' : ''));
+        const u = el('u'); u.textContent = m.kind === 'both' ? 'their ' + label : label;
+        const b = el('b'); b.textContent = m.after[k];
+        const i = el('i'); i.textContent = m.kind === 'both' ? 'yours ' + m.before[k] : 'was ' + m.before[k];
+        s.append(u, b, i); diff.appendChild(s);
+      });
+      det.appendChild(diff);
+    }
+
+    const acts = el('div', 'ib-acts');
+    const has = id => lib.scenes.some(s => s.id === id && !s.deleted);
+    const openBtn = el('button', 'btn key');
+    openBtn.textContent = m.kind === 'both' ? 'Open your version' : 'Open';
+    openBtn.onclick = () => {
+      const sc = lib.scenes.find(s => s.id === m.sceneId);
+      if (!sc || sc.deleted) return toast('That breakdown is no longer here');
+      closeInbox(); loadScene(sc);
+    };
+    if (has(m.sceneId)) acts.appendChild(openBtn);
+    if (m.kind === 'both' && has(m.forkId)) {
+      const otherBtn = el('button', 'btn');
+      otherBtn.textContent = 'Open the one that arrived';
+      otherBtn.onclick = () => {
+        const sc = lib.scenes.find(s => s.id === m.forkId);
+        if (!sc || sc.deleted) return toast('That copy is no longer here');
+        closeInbox(); loadScene(sc);
+      };
+      acts.appendChild(otherBtn);
+    }
+    const del = el('button', 'btn ghost'); del.textContent = 'Dismiss';
+    del.onclick = () => { inbox = inbox.filter(x => x.id !== m.id); saveInbox(); paintInbox(); paintInboxBadges(); };
+    acts.appendChild(del);
+    det.appendChild(acts);
+
+    msg.append(row, det); box.appendChild(msg);
+  });
+}
+function openInbox() { $('#inbox').classList.add('on'); paintInbox(); }
+function closeInbox() { $('#inbox').classList.remove('on'); }
+$('#ibClose').onclick = closeInbox;
+$('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
+$('#ibReadAll').onclick = () => { inbox.forEach(m => m.read = true); saveInbox(); paintInbox(); paintInboxBadges(); };
+$('#hInbox').onclick = () => openInbox();
+$('#libInbox').onclick = () => openInbox();
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
 const HISTKEY = 'tapline.history';
@@ -1176,6 +1362,7 @@ function paintHome() {
   const vis = visibleScenes().length;
   $('#hScenesCount').textContent = vis + (vis === 1 ? ' saved scene' : ' saved scenes');
   $('#hStore').textContent = (isAdmin() && drv.on) ? 'synced with google drive' : 'stored on this device';
+  paintInboxBadges();
 }
 
 /* ═══ scenes ══════════════════════════════════════════ */
@@ -1306,12 +1493,18 @@ function tutorialScene() {
     }
   };
 }
+function statsOf(data) {
+  const d = data || {}, L = d.layers || [];
+  return {
+    cuts: (d.markers || []).length,
+    tracks: L.reduce((n, l) => n + (l.tracks || []).length, 0),
+    notes: L.reduce((n, l) => n + (l.tracks || []).reduce((m, t) => m + (t.blocks || []).length, 0), 0)
+  };
+}
 function sceneStats(sc) {
-  const d = sc.data || {}, L = d.layers || [];
-  const tracks = L.reduce((n, l) => n + (l.tracks || []).length, 0);
-  const notes = L.reduce((n, l) => n + (l.tracks || []).reduce((m, t) => m + (t.blocks || []).length, 0), 0);
+  const s = statsOf(sc.data);
   const n = (v, w) => v + ' ' + w + (v === 1 ? '' : 's');
-  return [n((d.markers || []).length, 'cut'), n(tracks, 'track'), n(notes, 'note'), fmtWhen(sc.updated || Date.now())].join(' · ');
+  return [n(s.cuts, 'cut'), n(s.tracks, 'track'), n(s.notes, 'note'), fmtWhen(sc.updated || Date.now())].join(' · ');
 }
 function sceneFile(sc) {
   return { tapline: 1, kind: 'scene', name: sc.name, exported: new Date().toISOString(), scene: sc.data };
@@ -1503,21 +1696,33 @@ function tidyBlank() {
    loser we keep the remote copy alongside as a fork and let the user
    reconcile. Nothing is ever discarded to make the merge tidy. */
 function mergeScenes(localScenes, incoming, sinceSync) {
-  const m = {}, forks = [];
+  const m = {}, forks = [], arrivals = [];
   localScenes.forEach(s => { m[s.id] = s; });
   incoming.forEach(s => {
     const p = m[s.id];
-    if (!p) { m[s.id] = s; return; }
+    if (!p) {
+      m[s.id] = s;
+      if (!s.deleted) arrivals.push({ kind: 'new', sceneId: s.id, name: s.name, after: statsOf(s.data) });
+      return;
+    }
     const remoteNewer = (s.updated || 0) > (p.updated || 0);
     const localMovedToo = (p.updated || 0) > (sinceSync || 0);
     if (remoteNewer && localMovedToo && !p.deleted && !s.deleted) {
-      const fork = Object.assign({}, s, { id: uid(), name: s.name + ' (other device)' });
+      const fork = Object.assign({}, s, { id: uid(), name: s.name + ' (received)' });
       forks.push(fork); m[fork.id] = fork;
+      arrivals.push({ kind: 'both', sceneId: p.id, forkId: fork.id, name: p.name,
+        before: statsOf(p.data), after: statsOf(s.data) });
       return;                       /* local stays put; both survive */
     }
-    if ((s.updated || 0) >= (p.updated || 0)) m[s.id] = s;
+    if ((s.updated || 0) >= (p.updated || 0)) {
+      if (remoteNewer && !s.deleted) {
+        arrivals.push({ kind: 'updated', sceneId: s.id, name: s.name,
+          before: statsOf(p.data), after: statsOf(s.data) });
+      }
+      m[s.id] = s;
+    }
   });
-  return { scenes: Object.keys(m).map(k => m[k]), forks };
+  return { scenes: Object.keys(m).map(k => m[k]), forks, arrivals };
 }
 let syncing = false, lastErr = '', dirty = false;
 
@@ -1562,7 +1767,7 @@ async function driveXfer(dir) {
     lib.scenes = merged.scenes;
     slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
       'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
-    merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (other device)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
+    merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
 
     lastErr = ''; drv.last = Date.now(); saveDrv();
     if (push) dirty = false;
@@ -1590,13 +1795,14 @@ async function driveXfer(dir) {
     store.set(LIBKEY, lib);
     maybeSnapshot();
 
-    if (merged.forks.length) toast(merged.forks.length === 1
-      ? 'both devices changed a scene — theirs kept as "' + merged.forks[0].name + '"'
-      : merged.forks.length + ' scenes changed on both devices — both copies kept');
+    /* the whole point of the trip: say what turned up, in the inbox, rather
+       than leaving the user to infer it from counts in a log */
+    const got = deliver(merged.arrivals);
     paintSceneName(); paintDrive();
     if (screen === 'library') renderScenesIfIdle();
     if (screen === 'home') paintHome();
-    toast((push ? 'pushed · ' : 'pulled · ') + lib.scenes.length + (lib.scenes.length === 1 ? ' scene' : ' scenes'));
+    if (got) { openInbox(); toast(got === 1 ? '1 new arrival' : got + ' new arrivals'); }
+    else toast(push ? 'pushed — drive is up to date' : 'nothing new — you already have it all');
     return true;
   } catch (e) {
     lastErr = String(e.message || e);
@@ -1645,6 +1851,7 @@ function paintDrive(err) {
     : 'not linked';
   if (drv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
   const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && drv.on) ? 'synced with your drive when you ask' : 'stored on this device';
+  paintInboxBadges();
 }
 $('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
 $('#syncBtn').onclick = () => {
@@ -3023,6 +3230,7 @@ $('#nbTab').addEventListener('click', () => armStep(1));
 addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
   if (e.key === 'Escape') {
+    if ($('#inbox').classList.contains('on')) { closeInbox(); return; }
     if ($('#logs').classList.contains('on')) { $('#logs').classList.remove('on'); return; }
     if ($('#keys').classList.contains('on')) { $('#keys').classList.remove('on'); return; }
     if (screen === 'library') { go(P.markers.length ? 'edit' : 'home'); return; }
@@ -3222,6 +3430,7 @@ addEventListener('resize', syncTopbar);
      when you want the other device's work. */
   tidyBlank();
   if (screen === 'home') paintHome();
+  paintInboxBadges();
   slog('info', 'ready', drv.on ? 'drive linked · pull/push is manual' : 'drive not linked · local only');
 })();
 </script>
