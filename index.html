@@ -557,47 +557,58 @@ body.admin-mode #syncBtn{display:flex}
   width:100%;height:96px;resize:vertical;border-radius:8px;border:1px solid var(--line);
   background:rgba(0,0,0,.35);color:var(--dim);font-family:var(--mono);font-size:10px;padding:10px;
 }
-#scList{padding:4px 12px;display:flex;flex-direction:column;gap:10px}
+#scList{padding:4px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;align-items:start}
 .sc-card{
-  border-radius:14px;border:1px solid var(--line);
+  aspect-ratio:3/4;display:flex;flex-direction:column;
+  border-radius:16px;border:1px solid var(--line);padding:15px;
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
   transition:.15s;position:relative;
 }
+.sc-card.hist-open{aspect-ratio:auto}
 .sc-card:hover{border-color:var(--line2);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
 .sc-card.cur{border-color:rgba(143,166,255,.5);background:linear-gradient(180deg,rgba(143,166,255,.09),rgba(143,166,255,.02))}
-.sc-card.cur::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--cut);box-shadow:0 0 10px var(--cut)}
-.sc-top{display:flex;align-items:flex-start;gap:10px;padding:14px 14px 0}
-.sc-open{flex:1;min-width:0;display:block;text-align:left;padding:1px 0}
-.sc-name{display:flex;align-items:center;gap:8px;font-family:var(--txt);font-size:15.5px;font-weight:600;letter-spacing:-.012em;color:var(--text)}
+.sc-card.cur::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--cut);box-shadow:0 0 10px var(--cut)}
+.sc-top{display:flex;align-items:flex-start;gap:6px}
+.sc-open{flex:1;min-width:0;display:block;text-align:left}
+.sc-name{font-family:var(--txt);font-size:15px;font-weight:600;letter-spacing:-.012em;color:var(--text);line-height:1.28;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .sc-name .curtag{
-  font-family:var(--ui);font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cut);
-  background:rgba(143,166,255,.14);border:1px solid rgba(143,166,255,.35);padding:2px 7px;border-radius:20px;flex:none;
+  display:inline-block;margin-top:6px;font-family:var(--ui);font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cut);
+  background:rgba(143,166,255,.14);border:1px solid rgba(143,166,255,.35);padding:2px 7px;border-radius:20px;
 }
 .sc-nmedit{
-  width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line2);font-family:var(--txt);font-size:15.5px;font-weight:600;
-  color:var(--text);letter-spacing:-.012em;padding:5px 8px;border-radius:6px;display:none;
+  width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line2);font-family:var(--txt);font-size:15px;font-weight:600;
+  color:var(--text);letter-spacing:-.012em;padding:5px 7px;border-radius:6px;display:none;
 }
 .sc-card.editing .sc-name{display:none}
 .sc-card.editing .sc-nmedit{display:block}
-.sc-meta{display:block;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:4px}
-.sc-meta .dot{margin:0 6px;opacity:.5}
-.sc-acts{display:flex;gap:2px;flex:none}
+.sc-meta{display:block;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+.sc-meta .dot{margin:0 5px;opacity:.5}
+.sc-menu{position:relative;flex:none}
+.sc-mid-icons{display:flex;gap:4px;margin-top:8px}
 .sc-icon{
-  width:30px;height:30px;border-radius:8px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;
-  color:var(--faint);transition:.15s;
+  width:28px;height:28px;border-radius:8px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);transition:.15s;flex:none;
 }
 .sc-icon:hover{color:var(--text);background:rgba(255,255,255,.07);border-color:var(--line)}
-.sc-icon svg{width:14px;height:14px}
-.sc-bottom{display:flex;align-items:center;gap:10px;padding:10px 14px 12px}
-.sc-cloud{font-family:var(--ui);font-size:10px;font-weight:600;display:flex;align-items:center;gap:6px;color:var(--faint)}
+.sc-icon svg{width:13px;height:13px}
+.sc-spacer{flex:1;min-height:8px}
+.sc-cloud{font-family:var(--ui);font-size:9.5px;font-weight:600;display:flex;align-items:center;gap:6px;color:var(--faint);margin-bottom:9px}
 .sc-cloud i{width:6px;height:6px;border-radius:50%;background:var(--t3)}
 .sc-cloud.pending{color:var(--live)}
 .sc-cloud.pending i{background:var(--live)}
-.sc-hist-toggle{
-  font-family:var(--ui);font-size:10.5px;font-weight:600;color:var(--cut);display:flex;align-items:center;gap:5px;margin-left:auto;
+.sc-cta{display:flex;gap:6px}
+.sc-btn{
+  flex:1;font-family:var(--ui);font-size:11.5px;font-weight:600;padding:9px 10px;border-radius:9px;
+  border:1px solid var(--line);color:var(--dim);transition:.15s;white-space:nowrap;text-align:center;
 }
-.sc-hist-toggle svg{width:11px;height:11px}
-.sc-hist{display:none;margin:0 14px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.18);padding:4px}
+.sc-btn:hover{color:var(--text);border-color:var(--line2);background:rgba(255,255,255,.05)}
+.sc-btn.open{color:var(--ink);background:var(--cut);border-color:var(--cut);font-weight:700}
+.sc-btn.open:hover{filter:brightness(1.08)}
+.sc-btn.del{color:var(--faint)}
+.sc-btn.del:hover{color:var(--play);border-color:var(--play)}
+.sc-btn.del.sure{color:var(--play);border-color:var(--play);background:rgba(217,143,196,.12)}
+.sc-hist{display:none;margin-top:10px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.18);padding:4px}
 .sc-card.hist-open .sc-hist{display:block}
 .sc-hitem{display:flex;gap:9px;padding:8px 9px;border-radius:7px}
 .sc-hitem:hover{background:rgba(255,255,255,.04)}
@@ -605,7 +616,6 @@ body.admin-mode #syncBtn{display:flex}
 .sc-hitem .hwhat{font-family:var(--ui);font-size:12px;color:var(--dim)}
 .sc-hitem .hwhen{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:1px}
 .sc-hempty{padding:14px;text-align:center;font-family:var(--ui);font-size:11px;color:var(--faint)}
-.sc-menu{position:relative}
 .sc-drop{
   position:absolute;right:0;top:34px;z-index:5;min-width:150px;padding:5px;border-radius:9px;
   border:1px solid var(--line2);background:linear-gradient(180deg,rgba(32,35,58,.98),rgba(24,26,44,.98));
@@ -617,10 +627,9 @@ body.admin-mode #syncBtn{display:flex}
   padding:8px 10px;border-radius:6px;
 }
 .sc-drop button:hover{color:var(--text);background:rgba(255,255,255,.06)}
-.sc-drop button.del:hover{color:var(--play)}
-.sc-drop button.sure{color:var(--play)}
 .sc-foot{margin:0;padding:18px 20px;max-width:70ch;font-size:13px;line-height:1.5;color:var(--faint);border-top:1px solid var(--line)}
-@media (pointer:coarse){.sc-icon{width:36px;height:36px}}
+@media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+@media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
 
 #peek{
   position:fixed;z-index:40;display:none;max-width:340px;padding:10px 13px;border-radius:8px;
@@ -1398,10 +1407,10 @@ function renderScenes() {
     const openArea = el('div', 'sc-open');
     const nameRow = el('div', 'sc-name');
     nameRow.append(document.createTextNode(sc.name));
-    if (isCur) { const tag = el('span', 'curtag'); tag.textContent = 'current'; nameRow.appendChild(tag); }
+    openArea.appendChild(nameRow);
+    if (isCur) { const tag = el('span', 'curtag'); tag.textContent = 'current'; openArea.appendChild(tag); }
     const nmInput = el('input', 'sc-nmedit'); nmInput.value = sc.name;
-    const meta = el('span', 'sc-meta'); meta.textContent = sceneStats(sc);
-    openArea.append(nameRow, nmInput, meta);
+    openArea.appendChild(nmInput);
     openArea.onclick = () => { if (!card.classList.contains('editing') && !isCur) { loadScene(sc); renderScenes(); } };
 
     const commitRename = () => {
@@ -1420,16 +1429,6 @@ function renderScenes() {
     };
     nmInput.onblur = commitRename;
 
-    const acts = el('div', 'sc-acts');
-    const pencil = el('button', 'sc-icon'); pencil.title = 'Rename'; pencil.innerHTML = ICON_PENCIL;
-    pencil.onclick = e => { e.stopPropagation(); card.classList.add('editing'); nmInput.focus(); nmInput.select(); };
-    const clockBtn = el('button', 'sc-icon'); clockBtn.title = 'History'; clockBtn.innerHTML = ICON_CLOCK;
-    clockBtn.onclick = e => {
-      e.stopPropagation();
-      const opening = !card.classList.contains('hist-open');
-      card.classList.toggle('hist-open', opening);
-      if (opening) paintHist();
-    };
     const menu = el('div', 'sc-menu');
     const dotsBtn = el('button', 'sc-icon'); dotsBtn.title = 'More'; dotsBtn.innerHTML = ICON_DOTS;
     const drop = el('div', 'sc-drop');
@@ -1445,31 +1444,54 @@ function renderScenes() {
       const c = { id: uid(), name: sc.name + ' copy', updated: Date.now(), data: JSON.parse(JSON.stringify(sc.data)) };
       lib.scenes.unshift(c); store.set(LIBKEY, lib); renderScenes(); syncSoon();
     });
-    if (visibleScenes().length > 1) mk('Delete', 'del', function (e) {
-      e.stopPropagation();
-      if (!isBlank(sc) && !this._armed) {
-        this._armed = true; this.textContent = 'Sure?'; this.classList.add('sure');
-        setTimeout(() => { this._armed = false; this.textContent = 'Delete'; this.classList.remove('sure'); }, 2800);
-        return;
-      }
-      closeAllDrops();
-      pushUndo('a scene');
-      /* tombstone, don't remove — a plain removal never propagates: the other
-         device's next sync still has the old copy and just hands it back */
-      sc.deleted = true; sc.updated = Date.now(); sc.data = {};
-      if (sc.id === lib.current) loadScene(visibleScenes()[0]);
-      store.set(LIBKEY, lib); renderScenes(); syncSoon();
-    });
     dotsBtn.onclick = e => { e.stopPropagation(); const wasOn = drop.classList.contains('on'); closeAllDrops(); drop.classList.toggle('on', !wasOn); };
     menu.append(dotsBtn, drop);
-    acts.append(pencil, clockBtn, menu);
-    top.append(openArea, acts);
+    top.append(openArea, menu);
 
-    const bottom = el('div', 'sc-bottom');
+    const meta = el('span', 'sc-meta'); meta.textContent = sceneStats(sc);
+
+    const midIcons = el('div', 'sc-mid-icons');
+    const pencil = el('button', 'sc-icon'); pencil.title = 'Rename'; pencil.innerHTML = ICON_PENCIL;
+    pencil.onclick = e => { e.stopPropagation(); card.classList.add('editing'); nmInput.focus(); nmInput.select(); };
+    const clockBtn = el('button', 'sc-icon'); clockBtn.title = 'History'; clockBtn.innerHTML = ICON_CLOCK;
+    clockBtn.onclick = e => {
+      e.stopPropagation();
+      const opening = !card.classList.contains('hist-open');
+      card.classList.toggle('hist-open', opening);
+      if (opening) paintHist();
+    };
+    midIcons.append(pencil, clockBtn);
+
+    const spacer = el('div', 'sc-spacer');
+
     const cloud = el('span', 'sc-cloud' + (drv.on && (sc.updated || 0) > drv.last ? ' pending' : ''));
     const dot = el('i'); cloud.appendChild(dot);
     cloud.appendChild(document.createTextNode(!drv.on ? 'on this device' : (sc.updated || 0) > drv.last ? 'unsynced changes' : 'synced'));
-    bottom.appendChild(cloud);
+
+    const cta = el('div', 'sc-cta');
+    if (!isCur) {
+      const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open';
+      openBtn.onclick = e => { e.stopPropagation(); loadScene(sc); renderScenes(); };
+      cta.appendChild(openBtn);
+    }
+    if (visibleScenes().length > 1) {
+      const delBtn = el('button', 'sc-btn del'); delBtn.textContent = 'Delete';
+      delBtn.onclick = function (e) {
+        e.stopPropagation();
+        if (!isBlank(sc) && !this._armed) {
+          this._armed = true; this.textContent = 'Sure?'; this.classList.add('sure');
+          setTimeout(() => { this._armed = false; this.textContent = 'Delete'; this.classList.remove('sure'); }, 2800);
+          return;
+        }
+        pushUndo('a scene');
+        /* tombstone, don't remove — a plain removal never propagates: the other
+           device's next sync still has the old copy and just hands it back */
+        sc.deleted = true; sc.updated = Date.now(); sc.data = {};
+        if (sc.id === lib.current) loadScene(visibleScenes()[0]);
+        store.set(LIBKEY, lib); renderScenes(); syncSoon();
+      };
+      cta.appendChild(delBtn);
+    }
 
     const histBox = el('div', 'sc-hist');
     function paintHist() {
@@ -1488,7 +1510,7 @@ function renderScenes() {
       });
     }
 
-    card.append(top, bottom, histBox);
+    card.append(top, meta, midIcons, spacer, cloud, cta, histBox);
     box.appendChild(card);
   });
 }
