@@ -1,5 +1,15 @@
 # The app is a static file, so there is nothing to build — Netlify serves the
-# repo as-is and bundles the one function beside it.
+# repo as-is and bundles the functions beside it. The build command is only
+# here so the endpoints' one dependency is installed before they are bundled.
 [build]
   publish = "."
   functions = "netlify/functions"
+  command = "npm install"
+
+# The account endpoints answer on /api/*, same origin as the app, because the
+# session is a cookie and a cookie belongs to one origin. The ?key= endpoint
+# at /.netlify/functions/tapline is untouched and still reachable directly.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
