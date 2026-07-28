@@ -5,7 +5,9 @@
 
 [build]
   publish = "."
-  command = ""
+  # There is nothing to build — index.html ships as it is. This is only here
+  # so the function's one dependency is installed before it is bundled.
+  command = "npm install"
 
 [functions]
   directory = "netlify/functions"
