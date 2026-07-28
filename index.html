@@ -1094,6 +1094,8 @@ body.cloud #spMainRow{display:flex}
 .sd-big{font-family:var(--mono);font-size:clamp(46px,17vw,72px);line-height:1;color:var(--text);font-weight:400}
 .sd-lbl{font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin-top:10px}
 .sd-len{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:14px}
+.sd-tls{display:none;flex-direction:column;gap:8px;margin-top:24px;align-items:center;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.sd-tls .tl-chip{width:100%;justify-content:center}
 .sd-name{
   width:100%;padding:14px 14px;border-radius:11px;border:1px solid var(--line2);
   background:rgba(0,0,0,.3);color:var(--text);font-family:var(--txt);font-size:16px;font-weight:600;
@@ -1717,6 +1719,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <div class="sd-lbl">cuts captured</div>
       <div class="sd-len" id="sdLen">—</div>
       <div class="sd-spark" id="sdSpark" aria-hidden="true"></div>
+      <div id="sdTLs" class="sd-tls"></div>
     </div>
     <div class="sd-into" id="sdInto">—</div>
     <input id="sdName" class="sd-name" placeholder="name this one…" autocomplete="off">
@@ -2258,6 +2261,7 @@ function paintSend() {
   const eb = $('#send .eyebrow');
   if (eb) eb.textContent = tl ? '02 — name this timeline' : '02 — hand it over';
   const btn = $('#sdSend');
+  btn.style.display = 'block';
   btn.disabled = !cuts;
   btn.classList.remove('sent');
   paintSendSpark();
@@ -2278,6 +2282,24 @@ function paintSend() {
   st.textContent = srv.on
     ? (dirty ? 'not sent yet' : (srv.last ? 'last sent ' + fmtWhen(srv.last) : ''))
     : 'saved on this device';
+
+  const tlsBox = $('#sdTLs');
+  tlsBox.innerHTML = '';
+  if (P.timelines && P.timelines.length > 0) {
+    tlsBox.style.display = 'flex';
+    P.timelines.forEach((t, i) => {
+      const on = i === P.activeTL;
+      const chip = el('button', 'tl-chip' + (on ? ' on' : ''));
+      chip.style.setProperty('--c', t.color);
+      chip.appendChild(el('i'));
+      const sp = el('span'); sp.textContent = t.name; chip.appendChild(sp);
+      const n = el('b'); n.textContent = t.marks.length; chip.appendChild(n);
+      chip.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
+      tlsBox.appendChild(chip);
+    });
+  } else {
+    tlsBox.style.display = 'none';
+  }
 }
 $('#sdName').addEventListener('input', () => {
   const sc = curScene(); if (!sc) return;
