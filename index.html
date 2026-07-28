@@ -457,6 +457,9 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 }
 .hero:hover{transform:translateY(-2px)}
 .hero b{font-family:var(--txt);font-size:19px;font-weight:600;letter-spacing:-.02em}
+.hc-kick{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--cut)}
+#hContinue #hContinueName{font-size:21px}
+#hContinue #hContinueStats{font-family:var(--mono);font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--dim)}
 .hero span{font-family:var(--ui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .hero:hover{border-color:var(--cut);background:rgba(143,166,255,.06)}
 .hero:hover span{color:var(--dim)}
@@ -477,6 +480,22 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 .dp-note b{color:var(--text);font-weight:600}
 .dp-note i{font-style:normal;color:var(--cut)}
 .dp-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.dp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:12px;margin-top:14px}
+.dp-card{
+  position:relative;border:1px solid var(--line2);border-radius:14px;padding:18px 16px 16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+}
+.dp-card b{display:block;font-family:var(--txt);font-size:16px;font-weight:600;letter-spacing:-.015em;margin-bottom:5px}
+.dp-card p{margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--dim)}
+.dp-card .btn{width:100%;text-align:center;justify-content:center}
+.dp-n{
+  position:absolute;top:-9px;left:16px;width:22px;height:22px;border-radius:50%;
+  background:var(--cut);color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+/* the Apps Script source is genuinely for tinkerers — keep it out of the way */
+#dpSetup{display:none}
+#dpSetup.on{display:block;margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
 #dpId{
   flex:1;min-width:240px;padding:11px 12px;border-radius:8px;border:1px solid var(--line);
   background:rgba(0,0,0,.35);color:var(--text);font-family:var(--mono);font-size:11px;
@@ -490,8 +509,6 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 .dp-tabs button.on{color:var(--ink);background:var(--cut);font-weight:600}
 .dp-kindnote{margin:0 0 10px;font-size:13px;color:var(--dim)}
 .dp-kindnote b{color:var(--text);font-weight:600}
-#dpSetup{display:none;margin-top:14px}
-#dpSetup.on{display:block}
 .dp-steps{margin:0 0 12px;padding-left:20px;font-size:13.5px;line-height:1.7;color:var(--dim)}
 .dp-steps b{color:var(--text);font-weight:600}
 .dp-steps i{font-style:normal;color:var(--cut)}
@@ -527,11 +544,11 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #keys .btn{margin-top:22px}
 .sc-acts button.sure{color:var(--play);border-color:var(--play)}
 
-/* Drive settings are only ever reachable via the #admin route — nothing
-   points at them in the normal UI, so a casual visitor never sees them. */
-#driveBtn,#syncBtn{display:none}
-body.admin-mode #driveBtn{display:inline-block}
-body.admin-mode #syncBtn{display:flex}
+/* Sync is the whole point of having two devices, so it lives in plain sight.
+   #admin now only reveals the raw Apps Script source, which genuinely is
+   for tinkerers; everything else here is ordinary UI. */
+#driveBtn{display:inline-block}
+#syncBtn{display:flex}
 #syncBtn{
   align-items:center;gap:8px;height:30px;padding:0 11px;border-radius:6px;
   border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--faint);
@@ -575,6 +592,16 @@ body.admin-mode #syncBtn{display:flex}
 .sc-card.hist-open{aspect-ratio:auto}
 .sc-card:hover{border-color:var(--line2);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
 .sc-card.cur{border-color:rgba(143,166,255,.5);background:linear-gradient(180deg,rgba(143,166,255,.09),rgba(143,166,255,.02))}
+/* yours vs received, readable before you read a word */
+.sc-card.recd{border-color:rgba(232,201,155,.34);background:linear-gradient(180deg,rgba(232,201,155,.055),rgba(232,201,155,.012))}
+.sc-card.recd:hover{border-color:rgba(232,201,155,.6)}
+.sc-org{
+  display:inline-block;margin-left:8px;padding:2px 7px;border-radius:20px;vertical-align:middle;
+  font-family:var(--ui);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid currentColor;
+}
+.sc-org.own{color:var(--t3)}
+.sc-org.recd{color:var(--live)}
 .sc-card.cur::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--cut);box-shadow:0 0 10px var(--cut)}
 .sc-top{display:flex;align-items:flex-start;gap:6px}
 .sc-open{flex:1;min-width:0;display:block;text-align:left}
@@ -638,6 +665,41 @@ body.admin-mode #syncBtn{display:flex}
 .sc-foot{margin:0;padding:18px 20px;max-width:70ch;font-size:13px;line-height:1.5;color:var(--faint);border-top:1px solid var(--line)}
 @media (max-width:520px){#scList{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 @media (pointer:coarse){.sc-icon{width:34px;height:34px}.sc-btn{padding:11px 10px}}
+
+/* ── sync popover: push/pull from wherever you are ──── */
+#syncPop{
+  position:fixed;z-index:42;display:none;width:270px;padding:14px;border-radius:13px;
+  border:1px solid var(--line2);background:linear-gradient(180deg,rgba(46,41,74,.99),rgba(32,28,52,.99));
+  backdrop-filter:blur(18px);box-shadow:0 24px 60px rgba(0,0,0,.65);
+}
+#syncPop.on{display:block}
+.sp-state{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.sp-state i{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+.sp-state.ok i{background:var(--t3);box-shadow:0 0 10px var(--t3)}
+.sp-state.pending i{background:var(--live);box-shadow:0 0 10px var(--live)}
+.sp-state.err i{background:var(--play);box-shadow:0 0 10px var(--play)}
+.sp-state.busy i{animation:blink .9s steps(2,end) infinite}
+.sp-txt{font-family:var(--txt);font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.sp-sub{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:3px}
+.sp-btns{display:flex;gap:7px}
+.sp-btns button{
+  flex:1;padding:12px 8px;border-radius:9px;font-family:var(--ui);font-size:11.5px;font-weight:600;
+  border:1px solid var(--line2);color:var(--dim);background:rgba(255,255,255,.05);transition:.15s;
+}
+.sp-btns button:hover{color:var(--text);border-color:var(--dim)}
+.sp-btns button.go{background:var(--cut);border-color:var(--cut);color:var(--ink);font-weight:700}
+.sp-btns button[disabled]{opacity:.4;pointer-events:none}
+.sp-foot{display:flex;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+.sp-foot button{
+  font-family:var(--ui);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
+}
+.sp-foot button:hover{color:var(--dim)}
+#savedTag{
+  font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  opacity:0;transition:opacity .3s;white-space:nowrap;
+}
+#savedTag.on{opacity:1}
+@media (max-width:900px){#savedTag{display:none}}
 
 /* ── pairing ────────────────────────────────────────── */
 .pair-in{max-width:520px;margin:0 auto;padding:min(8vh,56px) 22px 48px;text-align:center}
@@ -721,7 +783,12 @@ body.screen-send #top{display:flex}
 .ib-msg.open .ib-chev{transform:rotate(90deg)}
 .ib-detail{display:none;padding:0 16px 16px;border-top:1px solid var(--line)}
 .ib-msg.open .ib-detail{display:block}
-.ib-what{margin:14px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.ib-spark{
+  position:relative;height:36px;margin-top:14px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);background:rgba(0,0,0,.26);
+}
+.ib-spark i{position:absolute;top:0;bottom:0;width:1.5px;margin-left:-.75px}
+.ib-what{margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--dim)}
 .ib-what b{color:var(--text);font-weight:600}
 .ib-diff{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ib-stat{
@@ -841,19 +908,19 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="loadBtn">Load audio</button>
     <hr>
     <button id="mHome">Home</button>
-    <button id="mScenes">Scenes…</button>
+    <button id="mScenes">Projects…</button>
     <button id="mKeys">Keyboard shortcuts<kbd>?</kbd></button>
-    <button id="mExport">Export scene</button>
-    <button id="mCopyScene">Copy scene</button>
-    <button id="mImport">Import scene</button>
+    <button id="mExport">Export project</button>
+    <button id="mCopyScene">Copy project</button>
+    <button id="mImport">Import project</button>
     <button id="mCopy">Copy as text</button>
     <button id="mCsv">Export .csv</button>
     <hr>
     <button id="mCompact">Compact capture: off</button>
-    <button id="mLogs">Sync log</button>
+    <button id="mLogs">Technical log</button>
     <button id="mRestore">Restore backup<span id="mRestoreWhen"></span></button>
     <hr>
-    <button id="mReset" class="danger">New scene</button>
+    <button id="mReset" class="danger">New project</button>
   </div>
 </div>
 
@@ -882,7 +949,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 <div id="editor">
   <div id="toolbar">
-    <button class="btn ghost" id="backBtn" title="Back to scenes">←</button>
+    <button class="btn ghost" id="backBtn" title="Back to projects">←</button>
     <div class="seg-ctl">
       <button id="toStart" title="Back to start">↺</button>
       <button id="prevCut" title="Previous cut">◀◀</button>
@@ -890,9 +957,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button id="nextCut" title="Next cut">▶▶</button>
     </div>
     <span id="posLabel">0:00 / 0:00</span>
-    <button id="syncBtn" title="Sync with Drive"><i></i><span id="syncLbl">sync off</span></button>
-    <button id="sceneBtn" title="Scenes"><b id="sceneName">Scene 1</b><span>▸</span></button>
-    <button class="btn ghost" id="retakeBtn" title="Record a new set of cuts — your notes stay put">↻ Retake</button>
+    <span id="savedTag">saved</span>
+    <button id="syncBtn" title="Send or get work"><i></i><span id="syncLbl">sync off</span></button>
+    <button id="sceneBtn" title="Projects"><b id="sceneName">Project 1</b><span>▸</span></button>
+    <button class="btn ghost" id="retakeBtn" title="Record another pass of cuts — your notes stay put">↻ Retake</button>
     <span id="audioName"></span>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
@@ -979,10 +1047,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <h1>What are you<br>taking apart today?</h1>
     <p class="home-lede">Play it once. Mark where it turns. Build the breakdown as you listen — no DAW, no timeline to fight.</p>
     <div class="home-acts">
-      <button class="hero" id="hContinue"><b>Continue</b><span id="hContinueName">—</span></button>
+      <button class="hero" id="hContinue">
+        <span class="hc-kick">pick up where you left off</span>
+        <b id="hContinueName">—</b>
+        <span id="hContinueStats">—</span>
+      </button>
       <button class="hero alt" id="hNew"><b>New breakdown</b><span>tap the cuts from scratch</span></button>
-      <button class="hero alt" id="hScenes"><b>Scenes</b><span id="hScenesCount">—</span></button>
+      <button class="hero alt" id="hScenes"><b>Projects</b><span id="hScenesCount">—</span></button>
       <button class="hero alt" id="hInbox"><b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span></button>
+      <button class="hero alt" id="hSync"><b>Sync<span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span></button>
     </div>
     <div class="home-foot"><span id="hStore">stored on this device</span></div>
   </div>
@@ -991,17 +1064,31 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div id="library" class="page">
   <div class="lib-head">
     <button class="btn ghost" id="libBack">← home</button>
-    <span class="sc-title">scenes</span>
+    <span class="sc-title">projects</span>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
     <button class="btn" id="driveBtn">Connect Drive</button>
   </div>
 
   <div id="drivePanel">
-    <p class="dp-note">Your scenes live in one text file — <b>tapline-state.json</b> — in your Drive. Paste the web-app URL below on every device and they all read and write that one file. No sign-in, no keys. Nothing transfers on its own: <i>pull</i> before you start on a device, <i>push</i> when you're done, and the <i>sync log</i> shows exactly what happened.</p>
-    <div class="dp-row">
-      <input id="dpId" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false" autocomplete="off">
-      <button class="btn key" id="dpConnect">Link</button>
+    <p class="dp-note">Your projects live in one file in <b>your own Google Drive</b>. Every device reads and writes that one file. No sign-in, no keys. Nothing moves on its own — you send and get work when you want to.</p>
+    <div class="dp-cards">
+      <div class="dp-card" id="dpCardFirst">
+        <span class="dp-n">1</span>
+        <b>Set up the first device</b>
+        <p>One-time: create the Drive connection and paste its address here.</p>
+        <div class="dp-row">
+          <input id="dpId" placeholder="paste the /exec address here" spellcheck="false" autocomplete="off">
+          <button class="btn key" id="dpConnect">Connect</button>
+        </div>
+        <button class="btn ghost" id="dpHow">Show me how to get that address</button>
+      </div>
+      <div class="dp-card" id="dpCardNext">
+        <span class="dp-n">2</span>
+        <b>Add your phone or tablet</b>
+        <p>Nothing to type — show a code and point the other device's camera at it.</p>
+        <button class="btn key" id="dpPairBig">Pair a device</button>
+      </div>
     </div>
     <div class="dp-row" id="dpLive">
       <span id="dpStatus">not linked</span>
@@ -1009,10 +1096,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button class="btn key" id="dpPull">Pull</button>
       <button class="btn" id="dpPush">Push</button>
       <button class="btn" id="dpPair">Pair a device</button>
-      <button class="btn ghost" id="dpLogs">Sync log</button>
+      <button class="btn ghost" id="dpLogs">Technical log</button>
       <button class="btn ghost" id="dpOut">Unlink</button>
     </div>
-    <button class="btn ghost" id="dpHow">Where do I get that URL?</button>
     <div id="dpSetup">
       <ol class="dp-steps">
         <li>Open <b>script.google.com</b> → New project.</li>
@@ -1031,17 +1117,17 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 
   <div class="sc-bar">
-    <button class="btn" id="scNew">New scene</button>
+    <button class="btn" id="scNew">New project</button>
     <button class="btn" id="scImport">Import file</button>
-    <button class="btn" id="scPasteToggle">Paste scene</button>
-    <button class="btn ghost" id="scTutorial" title="Add the guided walkthrough scene back to your list">Tutorial</button>
+    <button class="btn" id="scPasteToggle">Paste project</button>
+    <button class="btn ghost" id="scTutorial" title="Add the guided walkthrough back to your list">Tutorial</button>
   </div>
   <div id="scPasteWrap">
-    <textarea id="scPaste" placeholder="paste an exported scene here" spellcheck="false"></textarea>
-    <button class="btn key" id="scPasteGo">Load pasted scene</button>
+    <textarea id="scPaste" placeholder="paste an exported project here" spellcheck="false"></textarea>
+    <button class="btn key" id="scPasteGo">Load pasted project</button>
   </div>
   <div id="scList"></div>
-  <p class="sc-foot">Audio isn't carried in a scene — cuts, layers, tracks and notes are. Load the same track on the other device and everything lines up.</p>
+  <p class="sc-foot">Audio isn't carried in a project — cuts, layers, tracks and notes are. Load the same track on the other device and everything lines up.</p>
 </div>
 
 <div id="keys" class="page">
@@ -1059,6 +1145,19 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <div class="krow"><kbd>+ −</kbd><span>zoom · pinch on a tablet</span></div>
     <div class="krow"><kbd>esc</kbd><span>back a screen</span></div>
     <button class="btn" id="keysClose">close</button>
+  </div>
+</div>
+
+<div id="syncPop">
+  <div class="sp-state" id="spState"><i></i><div><div class="sp-txt" id="spTxt">—</div><div class="sp-sub" id="spSub"></div></div></div>
+  <div class="sp-btns">
+    <button id="spPull">Get changes</button>
+    <button class="go" id="spPush">Send my work</button>
+  </div>
+  <div class="sp-foot">
+    <button id="spPair">Pair a device</button>
+    <span class="spacer" style="flex:1"></span>
+    <button id="spLog">Technical log</button>
   </div>
 </div>
 
@@ -1114,7 +1213,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 <div id="logs" class="page">
   <div class="logs-in">
-    <span class="eyebrow">sync log</span>
+    <span class="eyebrow">technical log</span>
     <div class="log-head">
       <button class="btn" id="logPull">Pull from Drive</button>
       <button class="btn" id="logPush">Push to Drive</button>
@@ -1574,6 +1673,23 @@ $('#sdAgain').onclick = () => { $('#takebar').classList.remove('on'); startRetak
 $('#sdEditor').onclick = () => go('edit');
 $('#sdHome').onclick = () => go('home');
 
+/* ═══ origin — whose work is this? ═══════════════════════════════════
+   Deliberately a LOCAL-only set of ids, never synced: a pull replaces
+   scene objects wholesale with the server's copies, so a field living on
+   the scene would flip meaning on whichever device pulled last. "Mine"
+   means made here, which is a fact about this device. */
+const MINEKEY = 'tapline.mine';
+let mineIds = [];
+try { const raw = localStorage.getItem(MINEKEY); if (raw) mineIds = JSON.parse(raw) || []; } catch (e) {}
+const saveMine = () => { try { localStorage.setItem(MINEKEY, JSON.stringify(mineIds)); } catch (e) {} };
+function claimMine(id) {
+  if (!id || mineIds.includes(id)) return;
+  mineIds.push(id);
+  while (mineIds.length > 400) mineIds.shift();
+  saveMine();
+}
+const isMine = id => mineIds.includes(id);
+
 /* ═══ inbox — what a pull actually brought in ══════════════════════════
    A pull used to be a number in a log. This turns each arrival into a
    plain-language item you can open, read and act on, so "did my tablet
@@ -1606,10 +1722,22 @@ function paintInboxBadges() {
   });
 }
 const IB_COPY = {
-  new:     { tag: 'new', line: 'This breakdown was not on this device before. It came across whole — open it and carry on.' },
-  updated: { tag: 'updated', line: 'Your copy was behind, so it has been brought up to date. Nothing of yours was overwritten — you had no unsynced changes to this one.' },
-  both:    { tag: 'needs a look', line: 'This changed in both places since the last sync. <b>Your version is untouched.</b> The copy that arrived is saved next to it so you can compare and keep whichever is right.' }
+  new:     { tag: 'new', line: 'Wasn\u2019t on this device before.' },
+  updated: { tag: 'updated', line: 'Your copy was behind \u2014 now up to date.' },
+  both:    { tag: 'needs a look', line: '<b>Yours is untouched.</b> Their copy is saved beside it.' }
 };
+/* a row of ticks beats a sentence for "what does this timeline look like" —
+   same trick the take-compare bars use */
+function cutSpark(marks, dur, color) {
+  const box = el('div', 'ib-spark');
+  (marks || []).forEach(t => {
+    const i = el('i');
+    i.style.left = clamp(t / (dur || 1) * 100, 0, 100) + '%';
+    i.style.background = color;
+    box.appendChild(i);
+  });
+  return box;
+}
 function paintInbox() {
   const box = $('#ibList'); if (!box) return;
   const n = unreadCount();
@@ -1645,6 +1773,11 @@ function paintInbox() {
     };
 
     const det = el('div', 'ib-detail');
+    if (m.marks && m.marks.length) {
+      const sp = cutSpark(m.marks, m.dur || (m.marks[m.marks.length - 1] + 4),
+        m.kind === 'both' ? 'var(--live)' : 'var(--cut)');
+      det.appendChild(sp);
+    }
     const what = el('p', 'ib-what'); what.innerHTML = copy.line;
     det.appendChild(what);
 
@@ -1667,7 +1800,7 @@ function paintInbox() {
     openBtn.textContent = m.kind === 'both' ? 'Open your version' : 'Open';
     openBtn.onclick = () => {
       const sc = lib.scenes.find(s => s.id === m.sceneId);
-      if (!sc || sc.deleted) return toast('That breakdown is no longer here');
+      if (!sc || sc.deleted) return toast('That project is no longer here');
       closeInbox(); loadScene(sc);
     };
     if (has(m.sceneId)) acts.appendChild(openBtn);
@@ -1695,6 +1828,7 @@ $('#ibClose').onclick = closeInbox;
 $('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
 $('#ibReadAll').onclick = () => { inbox.forEach(m => m.read = true); saveInbox(); paintInbox(); paintInboxBadges(); };
 $('#hInbox').onclick = () => openInbox();
+$('#hSync').onclick = e => { e.stopPropagation(); drv.on ? openSyncPop($('#hSync')) : setupDrive(); };
 $('#libInbox').onclick = () => openInbox();
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
@@ -1761,12 +1895,21 @@ function go(next) {
 function paintHome() {
   const h = new Date().getHours();
   $('#greet').textContent = h < 5 ? 'still up' : h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : h < 22 ? 'good evening' : 'late session';
+  /* "Continue" said nothing about what it would continue — name the project
+     and what is in it, so opening it is not a leap of faith */
   const sc = curScene(), has = sc && !sc.deleted && (sc.data.markers || []).length;
   $('#hContinue').style.display = has ? 'flex' : 'none';
-  if (has) $('#hContinueName').textContent = sc.name + ' · ' + (sc.data.markers.length) + ' cuts';
+  if (has) {
+    const st = statsOf(sc.data);
+    $('#hContinueName').textContent = sc.name;
+    $('#hContinueStats').textContent = st.cuts + ' cuts · ' + st.notes + ' notes · ' + fmtWhen(sc.updated || Date.now());
+  }
   const vis = visibleScenes().length;
-  $('#hScenesCount').textContent = vis + (vis === 1 ? ' saved scene' : ' saved scenes');
-  $('#hStore').textContent = (isAdmin() && drv.on) ? 'synced with google drive' : 'stored on this device';
+  $('#hScenesCount').textContent = vis + (vis === 1 ? ' project' : ' projects');
+  const s = syncStatus();
+  $('#hSyncSub').textContent = drv.on ? s.txt.toLowerCase() : 'set up to use two devices';
+  const sb = $('#hSyncBadge'); if (sb) sb.style.display = (drv.on && (dirty || lastErr)) ? 'inline-block' : 'none';
+  $('#hStore').textContent = drv.on ? 'on this device · synced when you ask' : 'stored on this device';
   paintInboxBadges();
 }
 
@@ -1811,7 +1954,8 @@ function save() {
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
     const ok = await store.set(LIBKEY, lib);
-    if (!ok) toast('SAVE FAILED — export this scene from the menu now');
+    if (!ok) toast('SAVE FAILED — export this project from the menu now');
+    else flashSaved();
     syncSoon(); maybeSnapshot();
   }, 400);
   paintSceneName();
@@ -1848,7 +1992,7 @@ async function maybeSnapshot() {
 }
 function paintSceneName() {
   const sc = curScene();
-  const n = $('#sceneName'); if (n) n.textContent = sc ? sc.name : 'Scene';
+  const n = $('#sceneName'); if (n) n.textContent = sc ? sc.name : 'Project';
 }
 function loadScene(sc) {
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
@@ -1863,7 +2007,7 @@ function loadScene(sc) {
 }
 function blankScene(name) {
   return {
-    id: uid(), name: name || 'Scene ' + (lib.scenes.length + 1), updated: Date.now(),
+    id: uid(), name: name || 'Project ' + (lib.scenes.length + 1), updated: Date.now(),
     data: { markers: [], layers: [{ id: uid(), name: 'Layer 1', color: LAYER_COLORS[0], vis: true, tracks: [] }], active: 0, overlay: false, duration: 60, audioName: '', takeNum: 1 }
   };
 }
@@ -1916,18 +2060,18 @@ function sceneFile(sc) {
 }
 function readSceneFile(obj) {
   if (!obj || typeof obj !== 'object') return null;
-  if (obj.kind === 'scene' && obj.scene) return { name: obj.name || 'Imported scene', data: obj.scene };
-  if (obj.markers || obj.layers || obj.tracks) return { name: obj.name || obj.audioName || 'Imported scene', data: obj };
+  if (obj.kind === 'scene' && obj.scene) return { name: obj.name || 'Imported project', data: obj.scene };
+  if (obj.markers || obj.layers || obj.tracks) return { name: obj.name || obj.audioName || 'Imported project', data: obj };
   return null;
 }
 function adoptScene(parsed, open) {
   const sc = { id: uid(), name: parsed.name, updated: Date.now(), data: migrate(parsed.data) };
-  lib.scenes.unshift(sc);
+  lib.scenes.unshift(sc); claimMine(sc.id);
   store.set(LIBKEY, lib);
   if (open) loadScene(sc);
   renderScenes();
   syncSoon();
-  toast('Scene loaded: ' + sc.name);
+  toast('Project loaded: ' + sc.name);
   return sc;
 }
 function downloadScene(sc) {
@@ -2025,7 +2169,7 @@ const APPS_SCRIPT_SHEET = [
   "",
   "  var nt = ss.getSheetByName('notes') || ss.insertSheet('notes');",
   "  nt.clear();",
-  "  var out = [['scene', 'layer', 'track', 'section', 'start', 'end', 'note']];",
+  "  var out = [['project', 'layer', 'track', 'section', 'start', 'end', 'note']];",
   "  (o.scenes || []).forEach(function (sc) {",
   "    var d = sc.data || {}, mk = d.markers || [];",
   "    (d.layers || []).forEach(function (L) {",
@@ -2100,6 +2244,14 @@ function tidyBlank() {
    There LWW silently throws away one side's work, so instead of picking a
    loser we keep the remote copy alongside as a fork and let the user
    reconcile. Nothing is ever discarded to make the merge tidy. */
+/* keep the inbox preview cheap: a thinned copy of the cut times, not the scene */
+const sparkOf = sc => {
+  const m = ((sc.data || {}).markers || []);
+  if (m.length <= 120) return m.slice();
+  const step = m.length / 120, out = [];
+  for (let i = 0; i < 120; i++) out.push(m[Math.floor(i * step)]);
+  return out;
+};
 function mergeScenes(localScenes, incoming, sinceSync) {
   const m = {}, forks = [], arrivals = [];
   localScenes.forEach(s => { m[s.id] = s; });
@@ -2107,22 +2259,22 @@ function mergeScenes(localScenes, incoming, sinceSync) {
     const p = m[s.id];
     if (!p) {
       m[s.id] = s;
-      if (!s.deleted) arrivals.push({ kind: 'new', sceneId: s.id, name: s.name, after: statsOf(s.data) });
+      if (!s.deleted) arrivals.push({ kind: 'new', sceneId: s.id, name: s.name, after: statsOf(s.data), marks: sparkOf(s), dur: (s.data || {}).duration || 0 });
       return;
     }
     const remoteNewer = (s.updated || 0) > (p.updated || 0);
     const localMovedToo = (p.updated || 0) > (sinceSync || 0);
     if (remoteNewer && localMovedToo && !p.deleted && !s.deleted) {
-      const fork = Object.assign({}, s, { id: uid(), name: s.name + ' (received)' });
+      const fork = Object.assign({}, s, { id: uid() });
       forks.push(fork); m[fork.id] = fork;
       arrivals.push({ kind: 'both', sceneId: p.id, forkId: fork.id, name: p.name,
-        before: statsOf(p.data), after: statsOf(s.data) });
+        before: statsOf(p.data), after: statsOf(s.data), marks: sparkOf(s), dur: (s.data || {}).duration || 0 });
       return;                       /* local stays put; both survive */
     }
     if ((s.updated || 0) >= (p.updated || 0)) {
       if (remoteNewer && !s.deleted) {
         arrivals.push({ kind: 'updated', sceneId: s.id, name: s.name,
-          before: statsOf(p.data), after: statsOf(s.data) });
+          before: statsOf(p.data), after: statsOf(s.data), marks: sparkOf(s), dur: (s.data || {}).duration || 0 });
       }
       m[s.id] = s;
     }
@@ -2221,13 +2373,14 @@ async function driveXfer(dir) {
     return false;
   } finally {
     syncing = false; paintDrive();
+    if ($('#syncPop').classList.contains('on')) paintSyncPop();
   }
 }
 const drivePull = () => driveXfer('pull');
 const drivePush = () => driveXfer('push');
 /* every edit used to schedule a background push; now it only records that
    there is something worth pushing, which the UI surfaces */
-const syncSoon = () => { if (drv.on) { dirty = true; paintDrive(); } };
+const syncSoon = () => { if (drv.on) { dirty = true; paintDrive(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); } };
 
 addEventListener('pagehide', flushSave);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
@@ -2259,10 +2412,59 @@ function paintDrive(err) {
   paintInboxBadges();
 }
 $('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
-$('#syncBtn').onclick = () => {
-  if (!drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
-  openLogs();
+/* The sync popover — the whole point is that you never have to leave what
+   you are doing, or read a log, to send work or find out whether it went. */
+function syncStatus() {
+  if (!drv.on) return { cls: '', txt: 'Not connected', sub: 'Set up Drive to use two devices' };
+  if (syncing) return { cls: 'busy', txt: 'Working…', sub: '' };
+  if (lastErr) return { cls: 'err', txt: "Didn't go through", sub: lastErr };
+  if (dirty) return { cls: 'pending', txt: 'Changes not sent', sub: drv.last ? 'last sent ' + fmtWhen(drv.last) : 'never sent' };
+  return { cls: 'ok', txt: 'Everything is sent', sub: drv.last ? 'sent ' + fmtWhen(drv.last) : '' };
+}
+function paintSyncPop() {
+  const s = syncStatus();
+  $('#spState').className = 'sp-state ' + s.cls;
+  $('#spTxt').textContent = s.txt;
+  $('#spSub').textContent = s.sub;
+  $('#spPull').disabled = $('#spPush').disabled = syncing;
+  $('#spPush').textContent = drv.on ? 'Send my work' : 'Set up Drive';
+}
+function openSyncPop(anchor) {
+  const p = $('#syncPop');
+  paintSyncPop();
+  p.classList.add('on');
+  const r = anchor.getBoundingClientRect(), pr = p.getBoundingClientRect();
+  p.style.left = clamp(r.left + r.width / 2 - pr.width / 2, 8, innerWidth - pr.width - 8) + 'px';
+  const below = r.bottom + 8;
+  p.style.top = (below + pr.height < innerHeight - 8 ? below : Math.max(8, r.top - pr.height - 8)) + 'px';
+}
+const closeSyncPop = () => $('#syncPop').classList.remove('on');
+addEventListener('pointerdown', e => {
+  if (!e.target.closest('#syncPop') && !e.target.closest('#syncBtn') && !e.target.closest('#hSync')) closeSyncPop();
+});
+$('#syncBtn').onclick = e => {
+  e.stopPropagation();
+  $('#syncPop').classList.contains('on') ? closeSyncPop() : openSyncPop($('#syncBtn'));
 };
+$('#spPull').onclick = async () => { if (!drv.on) return setupDrive(); await drivePull(); paintSyncPop(); };
+$('#spPush').onclick = async () => { if (!drv.on) return setupDrive(); await drivePush(); paintSyncPop(); };
+$('#spPair').onclick = () => { closeSyncPop(); drv.on ? openPair() : setupDrive(); };
+$('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
+function setupDrive() {
+  closeSyncPop(); go('library');
+  $('#drivePanel').classList.add('on');
+  const f = $('#dpId'); if (f) f.focus();
+}
+
+/* auto-save already happens on every edit; this just says so, because
+   "did that save?" was being answered by pushing and reading a log */
+let savedT;
+function flashSaved() {
+  const t = $('#savedTag'); if (!t) return;
+  t.textContent = 'saved'; t.classList.add('on');
+  clearTimeout(savedT);
+  savedT = setTimeout(() => t.classList.remove('on'), 1800);
+}
 $('#dpId').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dpConnect').click(); });
 $('#dpHow').onclick = () => $('#dpSetup').classList.toggle('on');
 $('#dpCopyCode').onclick = () => navigator.clipboard.writeText(scriptKind === 'sheet' ? APPS_SCRIPT_SHEET : APPS_SCRIPT)
@@ -2281,6 +2483,7 @@ $('#dpPull').onclick = drivePull;
 $('#dpPush').onclick = drivePush;
 $('#dpLogs').onclick = openLogs;
 $('#dpPair').onclick = openPair;
+$('#dpPairBig').onclick = () => drv.on ? openPair() : toast('Connect this device first, then pair the others');
 $('#dpOut').onclick = () => { drv.on = false; saveDrv(); paintDrive(); toast('unlinked — still saved on this device'); };
 
 const visibleScenes = () => lib.scenes.filter(x => !x.deleted);
@@ -2347,16 +2550,23 @@ function renderScenes() {
     mk('Copy', '', e => {
       e.stopPropagation(); closeAllDrops();
       navigator.clipboard.writeText(JSON.stringify(sceneFile(sc)))
-        .then(() => toast('Scene copied — paste it on the other device'), () => toast('Copy blocked by the browser'));
+        .then(() => toast('Project copied — paste it on the other device'), () => toast('Copy blocked by the browser'));
     });
     mk('Duplicate', '', e => {
       e.stopPropagation(); closeAllDrops();
       const c = { id: uid(), name: sc.name + ' copy', updated: Date.now(), data: JSON.parse(JSON.stringify(sc.data)) };
-      lib.scenes.unshift(c); store.set(LIBKEY, lib); renderScenes(); syncSoon();
+      lib.scenes.unshift(c); claimMine(c.id); store.set(LIBKEY, lib); renderScenes(); syncSoon();
     });
     dotsBtn.onclick = e => { e.stopPropagation(); const wasOn = drop.classList.contains('on'); closeAllDrops(); drop.classList.toggle('on', !wasOn); };
     menu.append(dotsBtn, drop);
     top.append(openArea, menu);
+
+    /* whose is it? colour and badge, so a shared folder reads at a glance */
+    const mine = isMine(sc.id);
+    card.classList.add(mine ? 'own' : 'recd');
+    const org = el('span', 'sc-org ' + (mine ? 'own' : 'recd'));
+    org.textContent = mine ? 'yours' : 'received';
+    nameRow.appendChild(org);
 
     const meta = el('span', 'sc-meta'); meta.textContent = sceneStats(sc);
 
@@ -2376,10 +2586,10 @@ function renderScenes() {
 
     const cloud = el('span', 'sc-cloud' + (drv.on && (sc.updated || 0) > drv.last ? ' pending' : ''));
     const dot = el('i'); cloud.appendChild(dot);
-    cloud.appendChild(document.createTextNode(!drv.on ? 'on this device' : (sc.updated || 0) > drv.last ? 'unsynced changes' : 'synced'));
+    cloud.appendChild(document.createTextNode(!drv.on ? 'on this device' : (sc.updated || 0) > drv.last ? 'not sent yet' : 'sent'));
 
     const cta = el('div', 'sc-cta');
-    const openBtn = el('button', 'sc-btn open'); openBtn.textContent = isCur ? 'Continue' : 'Open';
+    const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open timeline';
     openBtn.onclick = e => { e.stopPropagation(); loadScene(sc); renderScenes(); };
     cta.appendChild(openBtn);
     if (visibleScenes().length > 1) {
@@ -2391,7 +2601,7 @@ function renderScenes() {
           setTimeout(() => { this._armed = false; this.textContent = 'Delete'; this.classList.remove('sure'); }, 2800);
           return;
         }
-        pushUndo('a scene');
+        pushUndo('a project');
         /* tombstone, don't remove — a plain removal never propagates: the other
            device's next sync still has the old copy and just hands it back */
         sc.deleted = true; sc.updated = Date.now(); sc.data = {};
@@ -2438,7 +2648,7 @@ $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.rem
 $('#libBack').onclick = () => go(P.markers.length ? workScreen() : 'home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
-  const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id;
+  const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id; claimMine(sc.id);
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
   markPLoaded(sc);
   armedKey = null; selMarker = -1; sel = null; playPos = 0; lastPos = 0;
@@ -2454,20 +2664,20 @@ $('#hContinue').onclick = () => go(P.markers.length ? workScreen() : 'capture');
 $('#scImport').onclick = () => $('#jsonIn').click();
 $('#scTutorial').onclick = () => {
   const sc = tutorialScene();
-  lib.scenes.unshift(sc);
+  lib.scenes.unshift(sc); claimMine(sc.id);
   store.set(LIBKEY, lib);
   loadScene(sc);
   renderScenes();
   syncSoon();
-  toast('Tutorial scene added');
+  toast('Tutorial added');
 };
 $('#scPasteToggle').onclick = () => $('#scPasteWrap').classList.toggle('on');
 $('#scPasteGo').onclick = () => {
   try {
     const parsed = readSceneFile(JSON.parse($('#scPaste').value.trim()));
-    if (!parsed) return toast('That text is not a Tapline scene');
+    if (!parsed) return toast('That text is not a Tapline project');
     adoptScene(parsed, true); $('#scPaste').value = ''; $('#scPasteWrap').classList.remove('on');
-  } catch (err) { toast('That text is not a Tapline scene'); }
+  } catch (err) { toast('That text is not a Tapline project'); }
 };
 
 /* ═══ liquid field ═══════════════════════════════════ */
@@ -3352,8 +3562,8 @@ addEventListener('drop', async e => {
     try {
       const parsed = readSceneFile(JSON.parse(await f.text()));
       if (parsed) { parsed.name = parsed.name || f.name.replace(/\.tapline\.json$|\.json$/i, ''); adoptScene(parsed, true); }
-      else toast('That file is not a Tapline scene');
-    } catch (err) { toast('That file is not a Tapline scene'); }
+      else toast('That file is not a Tapline project');
+    } catch (err) { toast('That file is not a Tapline project'); }
   }
 });
 
@@ -3707,7 +3917,7 @@ addEventListener('click', () => $('#menu').classList.remove('open'));
 $('#mRestore').onclick = async e => {
   e.stopPropagation();
   const backups = (await store.get(BAKKEY)) || [];
-  if (!backups.length) { toast('No local backups yet'); return; }
+  if (!backups.length) { toast('No backups yet'); return; }
   const last = backups[backups.length - 1];
   const btn = $('#mRestore');
   if (!btn._armed) {
@@ -3738,7 +3948,7 @@ $('#mExport').onclick = () => { save(); const sc = curScene(); if (sc) downloadS
 $('#mCopyScene').onclick = () => {
   save(); const sc = curScene(); if (!sc) return;
   navigator.clipboard.writeText(JSON.stringify(sceneFile(sc)))
-    .then(() => toast('Scene copied — paste it on the other device'), () => toast('Copy blocked by the browser'));
+    .then(() => toast('Project copied — paste it on the other device'), () => toast('Copy blocked by the browser'));
 };
 $('#mImport').onclick = () => $('#jsonIn').click();
 $('#jsonIn').onchange = async e => {
@@ -3746,10 +3956,10 @@ $('#jsonIn').onchange = async e => {
   e.target.value = '';
   try {
     const parsed = readSceneFile(JSON.parse(await f.text()));
-    if (!parsed) return toast('That file is not a Tapline scene');
-    if (!parsed.name || parsed.name === 'Imported scene') parsed.name = f.name.replace(/\.tapline\.json$|\.json$/i, '');
+    if (!parsed) return toast('That file is not a Tapline project');
+    if (!parsed.name || parsed.name === 'Imported project') parsed.name = f.name.replace(/\.tapline\.json$|\.json$/i, '');
     adoptScene(parsed, true);
-  } catch (err) { toast('That file is not a Tapline scene'); }
+  } catch (err) { toast('That file is not a Tapline project'); }
 };
 $('#mCopy').onclick = () => {
   let out = ((curScene() && curScene().name) || 'Breakdown') + (P.audioName ? '  —  ' + P.audioName : '') + '\n\n';
@@ -3812,14 +4022,14 @@ addEventListener('resize', syncTopbar);
       /* storage itself misbehaved rather than being empty — run from memory
          and write nothing, so a later good read can still find the data */
       lib = { current: null, scenes: [] };
-      const sc = blankScene('Scene 1'); lib.scenes.push(sc); lib.current = sc.id;
+      const sc = blankScene('Project 1'); lib.scenes.push(sc); lib.current = sc.id;
       setTimeout(() => toast("couldn't read saved scenes — not overwriting them"), 600);
     } else {
       const old = await store.get(OLDKEY);          /* carry a pre-scenes breakdown across */
       let sc;
-      if (old && old.markers && old.markers.length) { sc = blankScene('Scene 1'); sc.data = migrate(old); sc.name = old.audioName || 'Scene 1'; }
+      if (old && old.markers && old.markers.length) { sc = blankScene('Project 1'); sc.data = migrate(old); sc.name = old.audioName || 'Project 1'; }
       else sc = tutorialScene();                     /* brand-new install — start with the guided walkthrough */
-      lib = { current: sc.id, scenes: [sc] };
+      lib = { current: sc.id, scenes: [sc] }; claimMine(sc.id);
       store.set(LIBKEY, lib);
     }
   }
