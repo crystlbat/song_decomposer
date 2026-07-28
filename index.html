@@ -2335,7 +2335,7 @@ function mergeScenes(localScenes, incoming, sinceSync) {
   });
   return { scenes: Object.keys(m).map(k => m[k]), forks, arrivals };
 }
-let syncing = false, lastErr = '', dirty = false;
+let syncing = false, lastErr = '', dirty = false, driveGone = false;
 
 /* Sync only ever runs because you asked for it. Nothing here fires on a
    timer, on focus, or on a save — an automatic round trip that fails quietly
@@ -2353,9 +2353,31 @@ async function driveXfer(dir) {
     const body = push ? JSON.stringify({ scenes: lib.scenes }) : null;
     slog('net', (push ? 'POST' : 'GET') + ' → drive', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
 
-    const r = await fetch(drv.url, push ? { method: 'POST', body } : { method: 'GET' });
+    /* Apps Script can sit on a request indefinitely; without a deadline the
+       app just looks frozen and the log records nothing useful. */
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    const killer = ac ? setTimeout(() => ac.abort(), 45000) : 0;
+    let r;
+    try {
+      r = await fetch(drv.url, Object.assign(push ? { method: 'POST', body } : { method: 'GET' },
+        ac ? { signal: ac.signal } : {}));
+    } finally { clearTimeout(killer); }
+
     slog(r.ok ? 'net' : 'err', 'http ' + r.status + (r.redirected ? ' (redirected)' : ''), r.ok ? '' : r.statusText);
-    if (!r.ok) throw new Error('http ' + r.status + ' ' + (r.statusText || ''));
+    if (!r.ok) {
+      /* name the cause — an http number tells the user nothing about what to
+         go and do, and these three account for nearly every real failure */
+      const why = r.status === 404
+          ? 'that Drive connection no longer exists — the deployment was replaced or archived. Make a new deployment and link it again.'
+        : r.status === 401 || r.status === 403
+          ? 'the deployment is not public — set access to "anyone".'
+        : r.status === 429 || r.status >= 500
+          ? "Google is rate-limiting or having trouble — your work is safe here, try again in a few minutes."
+        : '';
+      if (why) slog('err', why);
+      if (r.status === 404) driveGone = true;
+      throw new Error(why || ('http ' + r.status + ' ' + (r.statusText || '')));
+    }
 
     const txt = await r.text();
     slog('net', 'reply ' + txt.length + ' bytes');
@@ -2380,7 +2402,7 @@ async function driveXfer(dir) {
       'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
     merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
 
-    lastErr = ''; drv.last = Date.now(); saveDrv();
+    lastErr = ''; driveGone = false; drv.last = Date.now(); saveDrv();
     if (push) dirty = false;
 
     /* A pull can replace the very scene the editor is showing. P is a copy
@@ -2419,7 +2441,10 @@ async function driveXfer(dir) {
     lastErr = String(e.message || e);
     /* fetch() rejects with a bare "Failed to fetch" for CORS and offline
        alike — say so rather than leaving a one-word error */
-    if (/failed to fetch|networkerror|load failed/i.test(lastErr)) {
+    if (/abort/i.test(lastErr)) {
+      lastErr = 'timed out after 45s';
+      slog('err', 'gave up waiting', 'Apps Script never answered — your work is still saved here');
+    } else if (/failed to fetch|networkerror|load failed/i.test(lastErr)) {
       slog('err', 'request never completed', navigator.onLine ? 'browser is online — blocked by CORS, or the URL is wrong' : 'browser reports offline');
     } else slog('err', (push ? 'push' : 'pull') + ' failed', lastErr);
     paintDrive(lastErr);
@@ -2471,6 +2496,7 @@ $('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
 function syncStatus() {
   if (!drv.on) return { cls: '', txt: 'Not connected', sub: 'Set up Drive to use two devices' };
   if (syncing) return { cls: 'busy', txt: 'Working…', sub: '' };
+  if (driveGone) return { cls: 'err', txt: 'Connection is gone', sub: 'Re-deploy in Apps Script, then Reconnect below' };
   if (lastErr) return { cls: 'err', txt: "Didn't go through", sub: lastErr };
   if (dirty) return { cls: 'pending', txt: 'Changes not sent', sub: drv.last ? 'last sent ' + fmtWhen(drv.last) : 'never sent' };
   return { cls: 'ok', txt: 'Everything is sent', sub: drv.last ? 'sent ' + fmtWhen(drv.last) : '' };
@@ -2481,7 +2507,7 @@ function paintSyncPop() {
   $('#spTxt').textContent = s.txt;
   $('#spSub').textContent = s.sub;
   $('#spPull').disabled = $('#spPush').disabled = syncing;
-  $('#spPush').textContent = drv.on ? 'Send my work' : 'Set up Drive';
+  $('#spPush').textContent = !drv.on ? 'Set up Drive' : driveGone ? 'Reconnect' : 'Send my work';
 }
 function openSyncPop(anchor) {
   const p = $('#syncPop');
@@ -2501,7 +2527,7 @@ $('#syncBtn').onclick = e => {
   $('#syncPop').classList.contains('on') ? closeSyncPop() : openSyncPop($('#syncBtn'));
 };
 $('#spPull').onclick = async () => { if (!drv.on) return setupDrive(); await drivePull(); paintSyncPop(); };
-$('#spPush').onclick = async () => { if (!drv.on) return setupDrive(); await drivePush(); paintSyncPop(); };
+$('#spPush').onclick = async () => { if (!drv.on || driveGone) return setupDrive(); await drivePush(); paintSyncPop(); };
 $('#spPair').onclick = () => { closeSyncPop(); drv.on ? openPair() : setupDrive(); };
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
 function setupDrive() {
