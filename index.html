@@ -4784,6 +4784,31 @@ function render() {
       const tag = el('span'); tag.textContent = String(list.length);
       tag.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--dim)';
       h.append(sw, inp, tag);
+      /* Overlay rows had no delete at all, and `overlay` is saved with the
+         project — so anything left in that view reopened looking as though
+         its tracks could never be removed. The row is one track seen across
+         several layers, so deleting it means all of them; say how many. */
+      const mx = el('button', 'x'); mx.textContent = '\u00d7';
+      const inLayers = P.layers.filter(L => L.vis !== false && L.tracks.some(T => tkey(T) === r.key));
+      mx.title = 'Delete "' + r.name + '" from every layer showing it';
+      mx.onclick = function (e) {
+        e.stopPropagation();
+        const notes = inLayers.reduce((a, L) =>
+          a + L.tracks.filter(T => tkey(T) === r.key).reduce((m, T) => m + (T.blocks || []).length, 0), 0);
+        if (!this._armed) {
+          this._armed = true; this.style.color = 'var(--play)';
+          toast('delete ' + r.name + ' from ' + inLayers.length + (inLayers.length === 1 ? ' layer' : ' layers')
+            + (notes ? ' and ' + notes + (notes === 1 ? ' note' : ' notes') : '') + '? tap × again');
+          setTimeout(() => { this._armed = false; this.style.color = ''; }, 2800);
+          return;
+        }
+        pushUndo('a track');
+        inLayers.forEach(L => { L.tracks = L.tracks.filter(T => tkey(T) !== r.key); });
+        render(); save();
+        logHist(lib.current, 'Removed track "' + r.name + '" from ' + inLayers.length + ' layers');
+        toast('deleted "' + r.name + '" — undo with cmd+z');
+      };
+      h.appendChild(mx);
     } else {
       sw.title = 'Change colour';
       sw.onclick = () => { const c = PALETTE[(PALETTE.indexOf(r.T.color) + 1) % PALETTE.length]; P.layers.forEach(L => L.tracks.forEach(T => { if (tkey(T) === r.key) T.color = c; })); render(); save(); };
