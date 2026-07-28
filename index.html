@@ -501,9 +501,9 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
   position:sticky;top:0;background:linear-gradient(180deg,rgba(46,40,74,.92),rgba(32,28,52,.86));
   backdrop-filter:blur(16px);z-index:2;
 }
-#library .sc-bar,#library #scPasteWrap,#library #scList,#library .sc-foot,#drivePanel{max-width:860px;margin:0 auto}
-#drivePanel{display:none;padding:16px 20px;border-bottom:1px solid var(--line)}
-#drivePanel.on{display:block}
+#library .sc-bar,#library #scPasteWrap,#library #scList,#library .sc-foot,#syncPanel{max-width:860px;margin:0 auto}
+#syncPanel{display:none;padding:16px 20px;border-bottom:1px solid var(--line)}
+#syncPanel.on{display:block}
 .dp-note{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--dim);max-width:70ch}
 .dp-note b{color:var(--text);font-weight:600}
 .dp-note i{font-style:normal;color:var(--cut)}
@@ -521,7 +521,7 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
   background:var(--cut);color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:600;
   display:flex;align-items:center;justify-content:center;
 }
-/* the Apps Script source is genuinely for tinkerers — keep it out of the way */
+/* the endpoint source is genuinely for tinkerers — keep it out of the way */
 #dpSetup{display:none}
 #dpSetup.on{display:block;margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
 #dpId{
@@ -549,7 +549,7 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 #dpStatus.ok{color:var(--cut)}
 #dpLive{display:none}
 #dpLive.on{display:flex}
-#driveBtn.ok{color:var(--cut);border-color:rgba(143,166,255,.45)}
+#syncSetup.ok{color:var(--cut);border-color:rgba(143,166,255,.45)}
 
 #capBack{
   position:fixed;top:52px;left:18px;z-index:7;pointer-events:auto;opacity:.75;
@@ -573,9 +573,9 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 .sc-acts button.sure{color:var(--play);border-color:var(--play)}
 
 /* Sync is the whole point of having two devices, so it lives in plain sight.
-   #admin now only reveals the raw Apps Script source, which genuinely is
+   #admin now only reveals the raw endpoint source, which genuinely is
    for tinkerers; everything else here is ordinary UI. */
-#driveBtn{display:inline-block}
+#syncSetup{display:inline-block}
 #syncBtn{display:flex}
 #syncBtn{
   align-items:center;gap:8px;height:30px;padding:0 11px;border-radius:6px;
@@ -1093,18 +1093,18 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span class="sc-title">projects</span>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
-    <button class="btn" id="driveBtn">Connect Drive</button>
+    <button class="btn" id="syncSetup">Connect sync</button>
   </div>
 
-  <div id="drivePanel">
-    <p class="dp-note">Your projects live in one file in <b>your own Google Drive</b>. Every device reads and writes that one file. No sign-in, no keys. Nothing moves on its own — you send and get work when you want to.</p>
+  <div id="syncPanel">
+    <p class="dp-note">Your projects live in <b>your own MongoDB</b>, one document per project. Every device reads and writes that one collection. Nothing moves on its own — you send and get work when you want to.</p>
     <div class="dp-cards">
       <div class="dp-card" id="dpCardFirst">
         <span class="dp-n">1</span>
         <b>Set up the first device</b>
-        <p>One-time: create the Drive connection and paste its address here.</p>
+        <p>One-time: put the sync endpoint online and paste its address here.</p>
         <div class="dp-row">
-          <input id="dpId" placeholder="paste the /exec address here" spellcheck="false" autocomplete="off">
+          <input id="dpId" placeholder="https://your-endpoint/?key=…" spellcheck="false" autocomplete="off">
           <button class="btn key" id="dpConnect">Connect</button>
         </div>
         <button class="btn ghost" id="dpHow">Show me how to get that address</button>
@@ -1127,16 +1127,16 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     </div>
     <div id="dpSetup">
       <ol class="dp-steps">
-        <li>Open <b>script.google.com</b> → New project.</li>
-        <li>Delete what's there, paste the code below, save.</li>
-        <li><b>Deploy → New deployment → Web app.</b> Execute as <i>Me</i>, access <i>Anyone</i>. Authorise it.</li>
-        <li>Copy the <b>/exec</b> URL it gives you and paste it above — on the laptop and the tablet.</li>
+        <li>Make a free cluster at <b>mongodb.com/atlas</b> → <b>Connect → Drivers</b> → copy the connection string. Under <b>Network Access</b>, allow <b>0.0.0.0/0</b> — a function gets a different address on every call, so the key in step 2 is what actually guards this.</li>
+        <li>Put the code below online with <b>MONGODB_URI</b> set to that connection string and <b>TAPLINE_KEY</b> set to a long random string you invent.</li>
+        <li>Paste the address it answers on, with <b>?key=</b><i>that same key</i> on the end, above — on the laptop and the tablet.</li>
       </ol>
+      <p class="dp-note">The connection string never leaves your server. This page only ever holds the https address and the key in it.</p>
       <div class="dp-tabs">
-        <button class="on" id="dpKindFile">a text file</button>
-        <button id="dpKindSheet">a google sheet</button>
+        <button class="on" id="dpKindFn">a netlify function</button>
+        <button id="dpKindNode">a node server</button>
       </div>
-      <p class="dp-kindnote" id="dpKindNote">One <b>tapline-state.json</b> in your Drive. Smallest and fastest.</p>
+      <p class="dp-kindnote" id="dpKindNote">One file in your <b>Netlify</b> site, at <b>netlify/functions/tapline.js</b>. Nothing to keep alive and free while it sits idle; the first call after a quiet spell takes a second or two to wake.</p>
       <pre id="dpCode"></pre>
       <button class="btn" id="dpCopyCode">Copy the code</button>
     </div>
@@ -1198,7 +1198,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button class="btn key" id="prCopy">Copy link</button>
       <button class="btn" id="prClose">Done</button>
     </div>
-    <p class="pr-warn"><b>Treat this link like a password.</b> Anyone who has it can read and change everything in your Drive file.</p>
+    <p class="pr-warn"><b>Treat this link like a password.</b> It carries the key to your endpoint — anyone who has it can read and change every project in your database.</p>
   </div>
 </div>
 
@@ -1212,7 +1212,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     </div>
     <input id="sdName" class="sd-name" placeholder="name this one…" autocomplete="off">
     <div class="sd-acts">
-      <button class="sd-btn go" id="sdSend">Send to Drive</button>
+      <button class="sd-btn go" id="sdSend">Send</button>
       <button class="sd-btn" id="sdAgain">Record again</button>
     </div>
     <div class="sd-state" id="sdState"></div>
@@ -1241,8 +1241,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div class="logs-in">
     <span class="eyebrow">technical log</span>
     <div class="log-head">
-      <button class="btn" id="logPull">Pull from Drive</button>
-      <button class="btn" id="logPush">Push to Drive</button>
+      <button class="btn" id="logPull">Pull</button>
+      <button class="btn" id="logPush">Push</button>
       <span class="spacer"></span>
       <button class="btn ghost" id="logCopy">Copy log</button>
       <button class="btn ghost" id="logClear">Clear</button>
@@ -1320,11 +1320,11 @@ function toast(msg) {
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2000);
 }
 
-/* ═══ admin route — visit #admin to reveal Drive settings ════ */
+/* ═══ admin route — visit #admin to reveal sync settings ════ */
 const isAdmin = () => location.hash === '#admin';
 function paintAdmin() {
   document.body.classList.toggle('admin-mode', isAdmin());
-  if (typeof paintDrive === 'function') paintDrive();
+  if (typeof paintSync === 'function') paintSync();
   if (screen === 'home' && typeof paintHome === 'function') paintHome();
 }
 addEventListener('hashchange', paintAdmin);
@@ -1401,16 +1401,16 @@ function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
 $('#logsClose').onclick = () => $('#logs').classList.remove('on');
 $('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
 $('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
-$('#ibPull').onclick = () => { if (!drv.on) { closeInbox(); go('library'); $('#drivePanel').classList.add('on'); return toast('Link your Drive URL first'); } drivePull(); };
-$('#logPull').onclick = () => drivePull();
-$('#logPush').onclick = () => drivePush();
+$('#ibPull').onclick = () => { if (!srv.on) { closeInbox(); go('library'); $('#syncPanel').classList.add('on'); return toast('Connect your sync address first'); } syncPull(); };
+$('#logPull').onclick = () => syncPull();
+$('#logPush').onclick = () => syncPush();
 $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
 };
 
 /* ═══ pairing ═════════════════════════════════════════════════════════
-   Typing a 120-character Apps Script URL into a phone or a walkman is
+   Typing a long endpoint URL and its key into a phone or a walkman is
    miserable, so the laptop shows a QR of a link that carries the URL in
    its hash: scan it, the app opens already linked. Minimal QR encoder —
    byte mode, ECC L, versions 1..10 (up to 271 chars). Verified against a
@@ -1608,25 +1608,23 @@ function qrMatrix(text) {
   return best;
 }
 
-/* An Apps Script URL is always .../macros/s/<id>/exec, so sending just the
-   id keeps the QR small enough to scan on a cheap camera. Anything that
-   doesn't match that shape falls back to carrying the whole URL. */
-const EXEC_RE = /^https:\/\/script\.google\.com\/macros\/s\/([\w-]+)\/exec/;
+/* The endpoint is a URL you picked with the key on the end, so unlike the
+   old Apps Script id there is nothing shorter to send in its place — the
+   whole thing rides in the hash. A version-10 QR holds 271 characters,
+   comfortably more than a hostname, a path and a key. */
 function pairLink() {
-  if (!drv.url) return '';
-  const base = location.origin + location.pathname;
-  const m = EXEC_RE.exec(drv.url);
-  return base + (m ? '#s=' + m[1] : '#u=' + encodeURIComponent(drv.url));
+  if (!srv.url) return '';
+  return location.origin + location.pathname + '#u=' + encodeURIComponent(srv.url);
 }
 /* Consumed before anything paints, then wiped from the address bar so the
    credential isn't left sitting in history or a screenshot. */
 function consumePairHash() {
-  const h = location.hash || '';
-  const s = /^#s=([\w-]+)$/.exec(h), u = /^#u=(.+)$/.exec(h);
-  if (!s && !u) return false;
-  const url = s ? 'https://script.google.com/macros/s/' + s[1] + '/exec' : decodeURIComponent(u[1]);
-  if (!EXEC_RE.test(url)) return false;
-  drv.url = url; drv.on = true; lastErr = ''; saveDrv();
+  const u = /^#u=(.+)$/.exec(location.hash || '');
+  if (!u) return false;
+  let url = '';
+  try { url = decodeURIComponent(u[1]); } catch (e) { return false; }
+  if (!endpointOk(url)) return false;
+  srv.url = url; srv.on = true; lastErr = ''; saveSrv();
   try { history.replaceState(null, '', location.origin + location.pathname); } catch (e) { location.hash = ''; }
   slog('info', 'paired from a link', url.slice(0, 60) + '…');
   return true;
@@ -1640,7 +1638,7 @@ function drawQR(text, cv) {
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (m[r][c]) cx2.fillRect(c * px, r * px, px, px);
 }
 function openPair() {
-  if (!drv.on || !drv.url) { toast('Link this device to Drive first'); return; }
+  if (!srv.on || !srv.url) { toast('Connect this device to your database first'); return; }
   const link = pairLink();
   $('#prLink').textContent = link;
   try { drawQR(link, $('#prQr')); $('#prQr').style.display = 'block'; }
@@ -1686,11 +1684,11 @@ function paintSend() {
   const btn = $('#sdSend');
   btn.disabled = !cuts;
   btn.classList.remove('sent');
-  btn.textContent = drv.on ? 'Send to Drive' : 'Link Drive to send';
+  btn.textContent = srv.on ? 'Send' : 'Connect sync to send';
   const st = $('#sdState');
   st.className = 'sd-state';
-  st.textContent = drv.on
-    ? (dirty ? 'not sent yet' : (drv.last ? 'last sent ' + fmtWhen(drv.last) : ''))
+  st.textContent = srv.on
+    ? (dirty ? 'not sent yet' : (srv.last ? 'last sent ' + fmtWhen(srv.last) : ''))
     : 'saved on this device';
 }
 $('#sdName').addEventListener('input', () => {
@@ -1700,11 +1698,11 @@ $('#sdName').addEventListener('input', () => {
 });
 $('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
 $('#sdSend').onclick = async () => {
-  if (!drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
+  if (!srv.on) { go('library'); $('#syncPanel').classList.add('on'); $('#dpId').focus(); return; }
   const st = $('#sdState'), btn = $('#sdSend');
   st.className = 'sd-state'; st.textContent = 'sending…';
   btn.disabled = true;
-  const ok = await drivePush();
+  const ok = await syncPush();
   btn.disabled = false;
   if (ok) {
     btn.classList.add('sent'); btn.textContent = 'Sent ✓';
@@ -1754,8 +1752,8 @@ function deliver(arrivals) {
 function paintInboxBadges() {
   const n = unreadCount();
   /* the inbox only means anything once there is a second device to receive
-     from — keep it out of the way until Drive is linked */
-  const show = drv.on || inbox.length;
+     from — keep it out of the way until sync is connected */
+  const show = srv.on || inbox.length;
   const hi = $('#hInbox'); if (hi) hi.style.display = show ? 'flex' : 'none';
   const li = $('#libInbox'); if (li) li.style.display = show ? 'inline-block' : 'none';
   [['#hInboxBadge', '#hInboxSub'], ['#libInboxBadge', null]].forEach(([bid, sid]) => {
@@ -1872,7 +1870,7 @@ $('#ibClose').onclick = closeInbox;
 $('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
 $('#ibReadAll').onclick = () => { inbox.forEach(m => m.read = true); saveInbox(); paintInbox(); paintInboxBadges(); };
 $('#hInbox').onclick = () => openInbox();
-$('#hSync').onclick = e => { e.stopPropagation(); drv.on ? openSyncPop($('#hSync')) : setupDrive(); };
+$('#hSync').onclick = e => { e.stopPropagation(); srv.on ? openSyncPop($('#hSync')) : setupSync(); };
 $('#libInbox').onclick = () => openInbox();
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
@@ -1951,9 +1949,9 @@ function paintHome() {
   const vis = visibleScenes().length;
   $('#hScenesCount').textContent = vis + (vis === 1 ? ' project' : ' projects');
   const s = syncStatus();
-  $('#hSyncSub').textContent = drv.on ? s.txt.toLowerCase() : 'set up to use two devices';
-  const sb = $('#hSyncBadge'); if (sb) sb.style.display = (drv.on && (dirty || lastErr)) ? 'inline-block' : 'none';
-  $('#hStore').textContent = drv.on ? 'on this device · synced when you ask' : 'stored on this device';
+  $('#hSyncSub').textContent = srv.on ? s.txt.toLowerCase() : 'set up to use two devices';
+  const sb = $('#hSyncBadge'); if (sb) sb.style.display = (srv.on && (dirty || lastErr)) ? 'inline-block' : 'none';
+  $('#hStore').textContent = srv.on ? 'on this device · synced when you ask' : 'stored on this device';
   paintInboxBadges();
 }
 
@@ -2015,7 +2013,7 @@ function flushSave() {
   store.set(LIBKEY, lib);
   maybeSnapshot();
 }
-/* a rolling, purely-local set of full snapshots — independent of Drive sync —
+/* a rolling, purely-local set of full snapshots — independent of sync —
    so a bad merge or a corrupted write to LIBKEY is still recoverable */
 const libWeight = l => (l && l.scenes || []).reduce((n, s) => n + ((s.data && s.data.markers || []).length), 0);
 let lastSnapshotAt = 0;
@@ -2130,150 +2128,185 @@ function downloadScene(sc) {
   a.click();
 }
 
-/* ═══ drive sync — one URL, one text file ═════════════ */
-const DKEY = 'tapline.drive';
-let drv = { url: '', on: false, last: 0 };
+/* ═══ sync — one endpoint, one document per project ═══ */
+/* The store is a MongoDB collection reached through a small endpoint you
+   deploy yourself. The app never sees the database: a connection string
+   carries full credentials and cannot live in a page anyone can view, so
+   the browser only ever knows an https URL and the key in it. */
+const SKEY = 'tapline.sync';
+const OLD_SKEY = 'tapline.drive';   /* the pre-Mongo Drive config, read once to explain itself */
+let srv = { url: '', on: false, last: 0 };
 
-const APPS_SCRIPT = [
-  "// Tapline sync — keeps every scene in one file in your Drive.",
-  "const FILE = 'tapline-state.json';",
+const MONGO_NODE = [
+  "// Tapline sync — every project is one document in your MongoDB.",
+  "// npm i mongodb",
+  "// MONGODB_URI='mongodb+srv://…' TAPLINE_KEY='a-long-random-string' node server.js",
+  "const http = require('http');",
+  "const { MongoClient } = require('mongodb');",
   "",
-  "function doGet()  { return out(read()); }",
+  "const KEY  = process.env.TAPLINE_KEY || '';   // must match the ?key= in the app's URL",
+  "const DB   = process.env.TAPLINE_DB  || 'tapline';",
+  "const PORT = process.env.PORT || 8787;",
+  "const client = new MongoClient(process.env.MONGODB_URI);",
+  "const col = () => client.db(DB).collection('scenes');",
   "",
-  "function doPost(e) {",
-  "  var incoming = {};",
-  "  try { incoming = JSON.parse(e.postData.contents || '{}'); } catch (err) {}",
-  "  var merged = merge(read(), incoming);",
-  "  write(merged);",
-  "  return out(merged);",
-  "}",
-  "",
-  "function read() {",
-  "  var it = DriveApp.getFilesByName(FILE);",
-  "  if (!it.hasNext()) return { scenes: [] };",
-  "  try { return JSON.parse(it.next().getBlob().getDataAsString()); }",
-  "  catch (err) { return { scenes: [] }; }",
-  "}",
-  "",
-  "function write(o) {",
-  "  var body = JSON.stringify(o);",
-  "  var it = DriveApp.getFilesByName(FILE);",
-  "  if (it.hasNext()) it.next().setContent(body);",
-  "  else DriveApp.createFile(FILE, body, 'application/json');",
-  "}",
-  "",
-  "// newest edit of each scene wins",
-  "function merge(a, b) {",
-  "  var m = {};",
-  "  (a.scenes || []).forEach(function (s) { m[s.id] = s; });",
-  "  (b.scenes || []).forEach(function (s) {",
-  "    var p = m[s.id];",
-  "    if (!p || (s.updated || 0) >= (p.updated || 0)) m[s.id] = s;",
+  "// _id is the project id the app already generates, so a project is the",
+  "// same document forever and two devices can never fork it into two rows.",
+  "async function read() {",
+  "  var docs = await col().find({}).toArray();",
+  "  return docs.map(function (d) {",
+  "    var s = Object.assign({}, d, { id: d._id });",
+  "    delete s._id;",
+  "    return s;",
   "  });",
-  "  return { scenes: Object.keys(m).map(function (k) { return m[k]; }), updated: Date.now() };",
   "}",
   "",
-  "function out(o) {",
-  "  return ContentService.createTextOutput(JSON.stringify(o))",
-  "    .setMimeType(ContentService.MimeType.JSON);",
-  "}"
+  "// newest edit of each project wins — the same rule the app applies locally",
+  "async function write(incoming) {",
+  "  var have = {};",
+  "  (await read()).forEach(function (s) { have[s.id] = s; });",
+  "  var ops = [];",
+  "  incoming.forEach(function (s) {",
+  "    if (!s || !s.id) return;",
+  "    var p = have[s.id];",
+  "    if (p && (p.updated || 0) > (s.updated || 0)) return;   // what we hold is newer",
+  "    have[s.id] = s;",
+  "    var doc = Object.assign({}, s);",
+  "    delete doc.id;",
+  "    ops.push({ replaceOne: { filter: { _id: s.id }, replacement: doc, upsert: true } });",
+  "  });",
+  "  if (ops.length) await col().bulkWrite(ops, { ordered: false });",
+  "  return Object.keys(have).map(function (k) { return have[k]; });",
+  "}",
+  "",
+  "function body(req) {",
+  "  return new Promise(function (done) {",
+  "    var b = '';",
+  "    req.on('data', function (c) { b += c; });",
+  "    req.on('end', function () { done(b); });",
+  "  });",
+  "}",
+  "function send(res, code, obj) {",
+  "  res.writeHead(code, { 'content-type': 'application/json' });",
+  "  res.end(JSON.stringify(obj));",
+  "}",
+  "",
+  "http.createServer(async function (req, res) {",
+  "  // the app is a static page on another origin, so every reply needs CORS",
+  "  res.setHeader('access-control-allow-origin', '*');",
+  "  res.setHeader('access-control-allow-headers', '*');",
+  "  res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');",
+  "  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }",
+  "",
+  "  var q = new URL(req.url, 'http://x').searchParams;",
+  "  if (KEY && q.get('key') !== KEY) return send(res, 401, { error: 'wrong key' });",
+  "",
+  "  try {",
+  "    if (req.method === 'GET') return send(res, 200, { scenes: await read() });",
+  "    if (req.method === 'POST') {",
+  "      var incoming = {};",
+  "      try { incoming = JSON.parse((await body(req)) || '{}'); } catch (err) {}",
+  "      var merged = await write(incoming.scenes || []);",
+  "      return send(res, 200, { scenes: merged, updated: Date.now() });",
+  "    }",
+  "    send(res, 405, { error: 'use GET or POST' });",
+  "  } catch (err) {",
+  "    send(res, 500, { error: String(err.message || err) });",
+  "  }",
+  "}).listen(PORT, function () { console.log('tapline sync listening on ' + PORT); });"
 ].join('\n');
 
-const APPS_SCRIPT_SHEET = [
-  "// Tapline sync — keeps every scene in a spreadsheet in your Drive.",
-  "// Tab 'notes' is readable; tab 'state' holds the exact data the app reads back.",
-  "const NAME = 'Tapline scenes';",
-  "const CHUNK = 40000;",
+const MONGO_FN = [
+  "// Tapline sync — every project is one document in your MongoDB.",
+  "// Save as netlify/functions/tapline.js in your site's repo, put",
+  "// mongodb in package.json (npm i mongodb), set MONGODB_URI and",
+  "// TAPLINE_KEY under Site configuration -> Environment variables.",
+  "// Your address is then",
+  "// https://<your-site>.netlify.app/.netlify/functions/tapline?key=<your key>",
+  "const { MongoClient } = require('mongodb');",
   "",
-  "function doGet()  { return out(read()); }",
+  "const KEY = process.env.TAPLINE_KEY || '';   // must match the ?key= in the app's URL",
+  "const DB  = process.env.TAPLINE_DB  || 'tapline';",
   "",
-  "function doPost(e) {",
-  "  var incoming = {};",
-  "  try { incoming = JSON.parse(e.postData.contents || '{}'); } catch (err) {}",
-  "  var merged = merge(read(), incoming);",
-  "  write(merged);",
-  "  return out(merged);",
-  "}",
+  "// a function is torn down and rebuilt constantly; parking the client on the",
+  "// global keeps one connection pool warm instead of dialling Atlas every call",
+  "if (!global._tapline) global._tapline = new MongoClient(process.env.MONGODB_URI);",
+  "const col = () => global._tapline.db(DB).collection('scenes');",
   "",
-  "function book() {",
-  "  var it = DriveApp.getFilesByName(NAME);",
-  "  return it.hasNext() ? SpreadsheetApp.open(it.next()) : SpreadsheetApp.create(NAME);",
-  "}",
-  "",
-  "function read() {",
-  "  var sh = book().getSheetByName('state');",
-  "  if (!sh || sh.getLastRow() < 1) return { scenes: [] };",
-  "  var parts = sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map(function (r) { return r[0]; });",
-  "  try { return JSON.parse(parts.join('')); } catch (err) { return { scenes: [] }; }",
-  "}",
-  "",
-  "function write(o) {",
-  "  var ss = book();",
-  "  var st = ss.getSheetByName('state') || ss.insertSheet('state');",
-  "  st.clear();",
-  "  var body = JSON.stringify(o), rows = [];",
-  "  for (var i = 0; i < body.length; i += CHUNK) rows.push([body.substr(i, CHUNK)]);",
-  "  if (!rows.length) rows = [['']];",
-  "  st.getRange(1, 1, rows.length, 1).setValues(rows);",
-  "",
-  "  var nt = ss.getSheetByName('notes') || ss.insertSheet('notes');",
-  "  nt.clear();",
-  "  var out = [['project', 'lane', 'layer', 'track', 'section', 'start', 'end', 'note']];",
-  "  (o.scenes || []).forEach(function (sc) {",
-  "    var d = sc.data || {};",
-  "    var lanes = (d.timelines && d.timelines.length) ? d.timelines",
-  "      : [{ id: null, name: 'Song sections', marks: d.markers || [] }];",
-  "    (d.layers || []).forEach(function (L) {",
-  "      (L.tracks || []).forEach(function (T) {",
-  "        (T.blocks || []).forEach(function (b) {",
-  "          var lane = null;",
-  "          for (var k = 0; k < lanes.length; k++) if (lanes[k].id && lanes[k].id === b.tl) lane = lanes[k];",
-  "          if (!lane) lane = lanes[0];",
-  "          var mk = lane.marks || [], n = 1;",
-  "          for (var i = 0; i < mk.length - 1; i++) if (b.s >= mk[i] - 0.001) n = i + 1;",
-  "          out.push([sc.name, lane.name, L.name, T.name, n, clock(b.s), clock(b.e), b.text]);",
-  "        });",
-  "      });",
-  "    });",
+  "// _id is the project id the app already generates, so a project is the",
+  "// same document forever and two devices can never fork it into two rows.",
+  "async function read() {",
+  "  var docs = await col().find({}).toArray();",
+  "  return docs.map(function (d) {",
+  "    var s = Object.assign({}, d, { id: d._id });",
+  "    delete s._id;",
+  "    return s;",
   "  });",
-  "  nt.getRange(1, 1, out.length, 8).setValues(out);",
-  "  nt.setFrozenRows(1);",
   "}",
   "",
-  "function clock(t) {",
-  "  t = Math.max(0, t || 0);",
-  "  return Math.floor(t / 60) + ':' + ('0' + Math.round(t % 60)).slice(-2);",
-  "}",
-  "",
-  "// newest edit of each scene wins",
-  "function merge(a, b) {",
-  "  var m = {};",
-  "  (a.scenes || []).forEach(function (s) { m[s.id] = s; });",
-  "  (b.scenes || []).forEach(function (s) {",
-  "    var p = m[s.id];",
-  "    if (!p || (s.updated || 0) >= (p.updated || 0)) m[s.id] = s;",
+  "// newest edit of each project wins — the same rule the app applies locally",
+  "async function write(incoming) {",
+  "  var have = {};",
+  "  (await read()).forEach(function (s) { have[s.id] = s; });",
+  "  var ops = [];",
+  "  incoming.forEach(function (s) {",
+  "    if (!s || !s.id) return;",
+  "    var p = have[s.id];",
+  "    if (p && (p.updated || 0) > (s.updated || 0)) return;   // what we hold is newer",
+  "    have[s.id] = s;",
+  "    var doc = Object.assign({}, s);",
+  "    delete doc.id;",
+  "    ops.push({ replaceOne: { filter: { _id: s.id }, replacement: doc, upsert: true } });",
   "  });",
-  "  return { scenes: Object.keys(m).map(function (k) { return m[k]; }), updated: Date.now() };",
+  "  if (ops.length) await col().bulkWrite(ops, { ordered: false });",
+  "  return Object.keys(have).map(function (k) { return have[k]; });",
   "}",
   "",
-  "function out(o) {",
-  "  return ContentService.createTextOutput(JSON.stringify(o))",
-  "    .setMimeType(ContentService.MimeType.JSON);",
-  "}"
+  "// the app is a static page on another origin, so every reply needs CORS",
+  "const CORS = {",
+  "  'content-type': 'application/json',",
+  "  'access-control-allow-origin': '*',",
+  "  'access-control-allow-headers': '*',",
+  "  'access-control-allow-methods': 'GET,POST,OPTIONS'",
+  "};",
+  "const reply = (code, obj) => ({ statusCode: code, headers: CORS, body: JSON.stringify(obj) });",
+  "",
+  "exports.handler = async function (event) {",
+  "  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };",
+  "",
+  "  var key = (event.queryStringParameters || {}).key || '';",
+  "  if (KEY && key !== KEY) return reply(401, { error: 'wrong key' });",
+  "",
+  "  try {",
+  "    if (event.httpMethod === 'GET') return reply(200, { scenes: await read() });",
+  "    if (event.httpMethod === 'POST') {",
+  "      var raw = event.isBase64Encoded",
+  "        ? Buffer.from(event.body || '', 'base64').toString('utf8')",
+  "        : (event.body || '');",
+  "      var incoming = {};",
+  "      try { incoming = JSON.parse(raw || '{}'); } catch (err) {}",
+  "      var merged = await write(incoming.scenes || []);",
+  "      return reply(200, { scenes: merged, updated: Date.now() });",
+  "    }",
+  "    return reply(405, { error: 'use GET or POST' });",
+  "  } catch (err) {",
+  "    return reply(500, { error: String(err.message || err) });",
+  "  }",
+  "};"
 ].join('\n');
 
-let scriptKind = 'file';
+let hostKind = 'fn';
 function paintKind() {
-  const sheet = scriptKind === 'sheet';
-  $('#dpKindFile').classList.toggle('on', !sheet);
-  $('#dpKindSheet').classList.toggle('on', sheet);
-  $('#dpCode').textContent = sheet ? APPS_SCRIPT_SHEET : APPS_SCRIPT;
-  $('#dpKindNote').innerHTML = sheet
-    ? "A <b>Tapline scenes</b> spreadsheet. The <b>notes</b> tab is one row per note — open it in Sheets or Excel; the <b>state</b> tab is what the app reads back."
-    : "One <b>tapline-state.json</b> in your Drive. Smallest and fastest.";
+  const fn = hostKind === 'fn';
+  $('#dpKindFn').classList.toggle('on', fn);
+  $('#dpKindNode').classList.toggle('on', !fn);
+  $('#dpCode').textContent = fn ? MONGO_FN : MONGO_NODE;
+  $('#dpKindNote').innerHTML = fn
+    ? "One file in your <b>Netlify</b> site, at <b>netlify/functions/tapline.js</b>. Nothing to keep alive and free while it sits idle; the first call after a quiet spell takes a second or two to wake."
+    : "One <b>server.js</b> on Render, Railway, Fly, or your own box. Always warm, and it runs anywhere Node runs — including localhost while you try it out.";
 }
-$('#dpKindFile').onclick = () => { scriptKind = 'file'; paintKind(); };
-$('#dpKindSheet').onclick = () => { scriptKind = 'sheet'; paintKind(); };
+$('#dpKindNode').onclick = () => { hostKind = 'node'; paintKind(); };
+$('#dpKindFn').onclick = () => { hostKind = 'fn'; paintKind(); };
 
 const isBlank = sc => !(sc.data.markers || []).length && !(sc.data.layers || []).some(L => (L.tracks || []).length);
 function tidyBlank() {
@@ -2285,7 +2318,7 @@ function tidyBlank() {
   if (next) loadScene(next);
 }
 
-/* newest-updated wins per scene id — the same rule the Apps Script merge()
+/* newest-updated wins per scene id — the same rule the endpoint's write()
    uses server-side. Applying it again here (instead of trusting the response
    as gospel) protects any edit made locally while a round trip was in
    flight: a slow request can take several seconds, plenty of time to
@@ -2335,31 +2368,32 @@ function mergeScenes(localScenes, incoming, sinceSync) {
   });
   return { scenes: Object.keys(m).map(k => m[k]), forks, arrivals };
 }
-let syncing = false, lastErr = '', dirty = false, driveGone = false;
+let syncing = false, lastErr = '', dirty = false, syncGone = false;
 
 /* Sync only ever runs because you asked for it. Nothing here fires on a
    timer, on focus, or on a save — an automatic round trip that fails quietly
    is exactly what made this impossible to diagnose, so every transfer is now
    an explicit act with a logged result. `dirty` just tracks whether local
    work has moved on since the last successful push. */
-async function driveXfer(dir) {
-  if (!drv.url) { slog('err', 'no drive url set'); toast('Link a Drive URL first'); return false; }
+async function syncXfer(dir) {
+  if (!srv.url) { slog('err', 'no sync address set'); toast('Connect a sync address first'); return false; }
   if (syncing) { slog('info', 'ignored — a transfer is already running'); return false; }
-  syncing = true; paintDrive();
+  syncing = true; paintSync();
   const t0 = Date.now();
   const push = dir !== 'pull';
   try {
     commitP(curScene(), false);   /* fold the editor in, without restamping */
     const body = push ? JSON.stringify({ scenes: lib.scenes }) : null;
-    slog('net', (push ? 'POST' : 'GET') + ' → drive', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
+    slog('net', (push ? 'POST' : 'GET') + ' → sync', push ? (lib.scenes.length + ' scenes, ' + body.length + ' bytes') : '');
 
-    /* Apps Script can sit on a request indefinitely; without a deadline the
+    /* A cold function waking its database, or a host that has gone away
+       entirely, can sit on a request indefinitely; without a deadline the
        app just looks frozen and the log records nothing useful. */
     const ac = typeof AbortController === 'function' ? new AbortController() : null;
     const killer = ac ? setTimeout(() => ac.abort(), 45000) : 0;
     let r;
     try {
-      r = await fetch(drv.url, Object.assign(push ? { method: 'POST', body } : { method: 'GET' },
+      r = await fetch(srv.url, Object.assign(push ? { method: 'POST', body } : { method: 'GET' },
         ac ? { signal: ac.signal } : {}));
     } finally { clearTimeout(killer); }
 
@@ -2368,14 +2402,16 @@ async function driveXfer(dir) {
       /* name the cause — an http number tells the user nothing about what to
          go and do, and these three account for nearly every real failure */
       const why = r.status === 404
-          ? 'that Drive connection no longer exists — the deployment was replaced or archived. Make a new deployment and link it again.'
+          ? 'nothing is answering at that address — check the path, and that the function is deployed.'
         : r.status === 401 || r.status === 403
-          ? 'the deployment is not public — set access to "anyone".'
-        : r.status === 429 || r.status >= 500
-          ? "Google is rate-limiting or having trouble — your work is safe here, try again in a few minutes."
+          ? 'the endpoint rejected the key — the ?key= on your address and TAPLINE_KEY on the server have to match.'
+        : r.status === 500 || r.status === 502
+          ? 'the endpoint ran but could not reach MongoDB — check MONGODB_URI, and that Atlas Network Access allows it.'
+        : r.status === 429 || r.status > 502
+          ? 'the host is rate-limiting or having trouble — your work is safe here, try again in a few minutes.'
         : '';
       if (why) slog('err', why);
-      if (r.status === 404) driveGone = true;
+      if (r.status === 404) syncGone = true;
       throw new Error(why || ('http ' + r.status + ' ' + (r.statusText || '')));
     }
 
@@ -2384,11 +2420,11 @@ async function driveXfer(dir) {
     let payload = null;
     try { payload = JSON.parse(txt); }
     catch (e) {
-      /* an HTML body here is almost always Google's sign-in or permission
-         page, which is the single most common reason sync silently dies */
+      /* an HTML body here is almost always the host's own 404 page, which
+         means the address points at the site and not at the function */
       const html = /^\s*<|<!doctype/i.test(txt);
-      slog('err', html ? 'got an HTML page, not JSON — deployment is not public' : 'reply was not JSON', txt.slice(0, 160));
-      throw new Error(html ? 'not public — set access to "anyone"' : 'reply was not JSON');
+      slog('err', html ? 'got an HTML page, not JSON — the address is not hitting the function' : 'reply was not JSON', txt.slice(0, 160));
+      throw new Error(html ? 'that address serves a web page, not the sync endpoint' : 'reply was not JSON');
     }
     if (!payload || !Array.isArray(payload.scenes)) { slog('err', 'reply had no scenes array', txt.slice(0, 160)); throw new Error('unexpected reply'); }
 
@@ -2396,13 +2432,13 @@ async function driveXfer(dir) {
     const before = lib.scenes.length;
     const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
     const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
-    const merged = mergeScenes(lib.scenes, incoming, drv.last);
+    const merged = mergeScenes(lib.scenes, incoming, srv.last);
     lib.scenes = merged.scenes;
     slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
-      'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
+      'the database had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
     merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
 
-    lastErr = ''; driveGone = false; drv.last = Date.now(); saveDrv();
+    lastErr = ''; syncGone = false; srv.last = Date.now(); saveSrv();
     if (push) dirty = false;
 
     /* A pull can replace the very scene the editor is showing. P is a copy
@@ -2431,11 +2467,11 @@ async function driveXfer(dir) {
     /* the whole point of the trip: say what turned up, in the inbox, rather
        than leaving the user to infer it from counts in a log */
     const got = deliver(merged.arrivals);
-    paintSceneName(); paintDrive();
+    paintSceneName(); paintSync();
     if (screen === 'library') renderScenesIfIdle();
     if (screen === 'home') paintHome();
     if (got) { openInbox(); toast(got === 1 ? '1 new arrival' : got + ' new arrivals'); }
-    else toast(push ? 'pushed — drive is up to date' : 'nothing new — you already have it all');
+    else toast(push ? 'pushed — the database is up to date' : 'nothing new — you already have it all');
     return true;
   } catch (e) {
     lastErr = String(e.message || e);
@@ -2443,63 +2479,63 @@ async function driveXfer(dir) {
        alike — say so rather than leaving a one-word error */
     if (/abort/i.test(lastErr)) {
       lastErr = 'timed out after 45s';
-      slog('err', 'gave up waiting', 'Apps Script never answered — your work is still saved here');
+      slog('err', 'gave up waiting', 'the endpoint never answered — your work is still saved here');
     } else if (/failed to fetch|networkerror|load failed/i.test(lastErr)) {
       slog('err', 'request never completed', navigator.onLine ? 'browser is online — blocked by CORS, or the URL is wrong' : 'browser reports offline');
     } else slog('err', (push ? 'push' : 'pull') + ' failed', lastErr);
-    paintDrive(lastErr);
+    paintSync(lastErr);
     toast((push ? 'push' : 'pull') + ' failed · ' + lastErr);
     return false;
   } finally {
-    syncing = false; paintDrive();
+    syncing = false; paintSync();
     if ($('#syncPop').classList.contains('on')) paintSyncPop();
   }
 }
-const drivePull = () => driveXfer('pull');
-const drivePush = () => driveXfer('push');
+const syncPull = () => syncXfer('pull');
+const syncPush = () => syncXfer('push');
 /* every edit used to schedule a background push; now it only records that
    there is something worth pushing, which the UI surfaces */
-const syncSoon = () => { if (drv.on) { dirty = true; paintDrive(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); } };
+const syncSoon = () => { if (srv.on) { dirty = true; paintSync(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); } };
 
 addEventListener('pagehide', flushSave);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
-function saveDrv() { store.set(DKEY, { url: drv.url, on: drv.on }); }
-function paintDrive(err) {
+function saveSrv() { store.set(SKEY, { url: srv.url, on: srv.on }); }
+function paintSync(err) {
   const sb = $('#syncBtn'), sl = $('#syncLbl');
   const e = err || lastErr;
   if (sb) {
-    sb.classList.toggle('on', drv.on && !e);
+    sb.classList.toggle('on', srv.on && !e);
     sb.classList.toggle('busy', syncing);
-    sb.classList.toggle('err', !!(drv.on && e));
-    sb.classList.toggle('pending', !!(drv.on && dirty && !e && !syncing));
-    if (!drv.on) sl.textContent = 'sync off';
+    sb.classList.toggle('err', !!(srv.on && e));
+    sb.classList.toggle('pending', !!(srv.on && dirty && !e && !syncing));
+    if (!srv.on) sl.textContent = 'sync off';
     else if (syncing) sl.textContent = 'syncing';
     else if (e) sl.textContent = 'sync error';
     else if (dirty) sl.textContent = 'unpushed';
-    else sl.textContent = drv.last ? new Date(drv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ready';
+    else sl.textContent = srv.last ? new Date(srv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'ready';
   }
-  const b = $('#driveBtn'), st = $('#dpStatus');
-  b.classList.toggle('ok', drv.on);
-  b.textContent = drv.on ? 'Drive on' : 'Drive sync';
-  $('#dpLive').classList.toggle('on', drv.on);
-  st.classList.toggle('ok', drv.on && !e);
+  const b = $('#syncSetup'), st = $('#dpStatus');
+  b.classList.toggle('ok', srv.on);
+  b.textContent = srv.on ? 'Sync on' : 'Connect sync';
+  $('#dpLive').classList.toggle('on', srv.on);
+  st.classList.toggle('ok', srv.on && !e);
   st.textContent = e ? e
-    : drv.on ? ('linked · last sync ' + (drv.last ? new Date(drv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'))
+    : srv.on ? ('linked · last sync ' + (srv.last ? new Date(srv.last).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'))
     : 'not linked';
-  if (drv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
-  const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && drv.on) ? 'synced with your drive when you ask' : 'stored on this device';
+  if (srv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
+  const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && srv.on) ? 'synced with your database when you ask' : 'stored on this device';
   paintInboxBadges();
 }
-$('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
+$('#syncSetup').onclick = () => $('#syncPanel').classList.toggle('on');
 /* The sync popover — the whole point is that you never have to leave what
    you are doing, or read a log, to send work or find out whether it went. */
 function syncStatus() {
-  if (!drv.on) return { cls: '', txt: 'Not connected', sub: 'Set up Drive to use two devices' };
+  if (!srv.on) return { cls: '', txt: 'Not connected', sub: 'Set up sync to use two devices' };
   if (syncing) return { cls: 'busy', txt: 'Working…', sub: '' };
-  if (driveGone) return { cls: 'err', txt: 'Connection is gone', sub: 'Re-deploy in Apps Script, then Reconnect below' };
+  if (syncGone) return { cls: 'err', txt: 'Nothing at that address', sub: 'Check the endpoint is deployed, then Reconnect below' };
   if (lastErr) return { cls: 'err', txt: "Didn't go through", sub: lastErr };
-  if (dirty) return { cls: 'pending', txt: 'Changes not sent', sub: drv.last ? 'last sent ' + fmtWhen(drv.last) : 'never sent' };
-  return { cls: 'ok', txt: 'Everything is sent', sub: drv.last ? 'sent ' + fmtWhen(drv.last) : '' };
+  if (dirty) return { cls: 'pending', txt: 'Changes not sent', sub: srv.last ? 'last sent ' + fmtWhen(srv.last) : 'never sent' };
+  return { cls: 'ok', txt: 'Everything is sent', sub: srv.last ? 'sent ' + fmtWhen(srv.last) : '' };
 }
 function paintSyncPop() {
   const s = syncStatus();
@@ -2507,7 +2543,7 @@ function paintSyncPop() {
   $('#spTxt').textContent = s.txt;
   $('#spSub').textContent = s.sub;
   $('#spPull').disabled = $('#spPush').disabled = syncing;
-  $('#spPush').textContent = !drv.on ? 'Set up Drive' : driveGone ? 'Reconnect' : 'Send my work';
+  $('#spPush').textContent = !srv.on ? 'Set up sync' : syncGone ? 'Reconnect' : 'Send my work';
 }
 function openSyncPop(anchor) {
   const p = $('#syncPop');
@@ -2526,13 +2562,13 @@ $('#syncBtn').onclick = e => {
   e.stopPropagation();
   $('#syncPop').classList.contains('on') ? closeSyncPop() : openSyncPop($('#syncBtn'));
 };
-$('#spPull').onclick = async () => { if (!drv.on) return setupDrive(); await drivePull(); paintSyncPop(); };
-$('#spPush').onclick = async () => { if (!drv.on || driveGone) return setupDrive(); await drivePush(); paintSyncPop(); };
-$('#spPair').onclick = () => { closeSyncPop(); drv.on ? openPair() : setupDrive(); };
+$('#spPull').onclick = async () => { if (!srv.on) return setupSync(); await syncPull(); paintSyncPop(); };
+$('#spPush').onclick = async () => { if (!srv.on || syncGone) return setupSync(); await syncPush(); paintSyncPop(); };
+$('#spPair').onclick = () => { closeSyncPop(); srv.on ? openPair() : setupSync(); };
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
-function setupDrive() {
+function setupSync() {
   closeSyncPop(); go('library');
-  $('#drivePanel').classList.add('on');
+  $('#syncPanel').classList.add('on');
   const f = $('#dpId'); if (f) f.focus();
 }
 
@@ -2547,33 +2583,39 @@ function flashSaved() {
 }
 $('#dpId').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dpConnect').click(); });
 $('#dpHow').onclick = () => $('#dpSetup').classList.toggle('on');
-$('#dpCopyCode').onclick = () => navigator.clipboard.writeText(scriptKind === 'sheet' ? APPS_SCRIPT_SHEET : APPS_SCRIPT)
+$('#dpCopyCode').onclick = () => navigator.clipboard.writeText(hostKind === 'fn' ? MONGO_FN : MONGO_NODE)
   .then(() => toast('code copied'), () => toast('copy blocked by the browser'));
+/* What belongs in the box is the address the endpoint answers on. The one
+   thing that must never go in is the MongoDB connection string: it carries
+   the database user and password in clear, and whatever is typed here is
+   stored on the device and travels in the pairing link. Refuse that by
+   name rather than letting it fail later as a vague network error. */
+function endpointOk(u) {
+  if (/^mongodb(\+srv)?:\/\//i.test(u)) return false;
+  if (/^https:\/\/.+/i.test(u)) return true;
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(u);   /* trying it out locally */
+}
 $('#dpConnect').onclick = async () => {
   const u = $('#dpId').value.trim();
-  /* Apps Script shows two URLs and only one of them can ever work here:
-     /dev is the head/test deployment and always demands a signed-in editor,
-     so it can never answer an anonymous request from this app. Say so
-     rather than repeating "paste the /exec url" at someone who thinks
-     they did. */
-  if (/\/dev(\?|#|$)/.test(u)) {
-    slog('err', 'that is the /dev test URL', 'it only answers a signed-in editor — use the /exec URL');
-    return toast('that is the test URL — use the /exec one from Deploy → Manage deployments');
+  if (/^mongodb(\+srv)?:\/\//i.test(u)) {
+    slog('err', 'that is the database connection string', 'it holds your database password — it belongs in MONGODB_URI on the server, never in this page');
+    return toast('that is your connection string — it goes on the server, not here');
   }
-  if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) return toast('paste the /exec url from your deployment');
-  drv.url = u; drv.on = true; lastErr = ''; saveDrv();
-  slog('info', 'linking', u);
-  $('#dpStatus').textContent = 'linking…';
-  await drivePull();
-  if (lastErr) { drv.on = false; saveDrv(); paintDrive(lastErr); openLogs(); }
-  else toast('linked — pull and push from the sync log when you want');
+  if (!endpointOk(u)) return toast('paste the https address your sync endpoint answers on');
+  if (!/[?&]key=/.test(u)) slog('info', 'no ?key= in that address', 'fine if you left TAPLINE_KEY empty — but then anyone who finds the address can read and write your projects');
+  srv.url = u; srv.on = true; lastErr = ''; saveSrv();
+  slog('info', 'connecting', u);
+  $('#dpStatus').textContent = 'connecting…';
+  await syncPull();
+  if (lastErr) { srv.on = false; saveSrv(); paintSync(lastErr); openLogs(); }
+  else toast('connected — pull and push whenever you want');
 };
-$('#dpPull').onclick = drivePull;
-$('#dpPush').onclick = drivePush;
+$('#dpPull').onclick = syncPull;
+$('#dpPush').onclick = syncPush;
 $('#dpLogs').onclick = openLogs;
 $('#dpPair').onclick = openPair;
-$('#dpPairBig').onclick = () => drv.on ? openPair() : toast('Connect this device first, then pair the others');
-$('#dpOut').onclick = () => { drv.on = false; saveDrv(); paintDrive(); toast('unlinked — still saved on this device'); };
+$('#dpPairBig').onclick = () => srv.on ? openPair() : toast('Connect this device first, then pair the others');
+$('#dpOut').onclick = () => { srv.on = false; saveSrv(); paintSync(); toast('unlinked — still saved on this device'); };
 
 const visibleScenes = () => lib.scenes.filter(x => !x.deleted);
 const ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
@@ -2673,9 +2715,9 @@ function renderScenes() {
 
     const spacer = el('div', 'sc-spacer');
 
-    const cloud = el('span', 'sc-cloud' + (drv.on && (sc.updated || 0) > drv.last ? ' pending' : ''));
+    const cloud = el('span', 'sc-cloud' + (srv.on && (sc.updated || 0) > srv.last ? ' pending' : ''));
     const dot = el('i'); cloud.appendChild(dot);
-    cloud.appendChild(document.createTextNode(!drv.on ? 'on this device' : (sc.updated || 0) > drv.last ? 'not sent yet' : 'sent'));
+    cloud.appendChild(document.createTextNode(!srv.on ? 'on this device' : (sc.updated || 0) > srv.last ? 'not sent yet' : 'sent'));
 
     const cta = el('div', 'sc-cta');
     const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open timeline';
@@ -4210,13 +4252,27 @@ addEventListener('resize', syncTopbar);
 
   hist = (await store.get(HISTKEY)) || {};
 
-  const cfg = await store.get(DKEY);
-  if (cfg) { drv.url = cfg.url || ''; drv.on = !!cfg.on && !!cfg.url; $('#dpId').value = drv.url; }
+  const cfg = await store.get(SKEY);
+  if (cfg) { srv.url = cfg.url || ''; srv.on = !!cfg.on && !!cfg.url; $('#dpId').value = srv.url; }
+  /* Sync used to run through a Google Apps Script deployment. That address
+     cannot answer any more, and silently ignoring it would leave the device
+     looking connected while every push failed — so say what happened, once,
+     and leave the projects on the device untouched. */
+  let fromDrive = false;
+  if (!cfg) {
+    const old = await store.get(OLD_SKEY);
+    if (old && old.url) {
+      fromDrive = true;
+      slog('info', 'sync moved from Google Drive to MongoDB',
+        'the old ' + String(old.url).slice(0, 48) + '… no longer applies — connect your endpoint address to sync again');
+    }
+  }
   const paired = consumePairHash();
-  $('#dpId').value = drv.url;
+  $('#dpId').value = srv.url;
   paintKind();
-  paintDrive();
+  paintSync();
   if (paired) toast('paired — pull to get your breakdowns');
+  else if (fromDrive) toast('sync now runs on MongoDB — reconnect in projects');
   go('home');
   maybeSnapshot();
   /* No network on boot any more: startup is instant and offline-identical,
@@ -4225,7 +4281,7 @@ addEventListener('resize', syncTopbar);
   tidyBlank();
   if (screen === 'home') paintHome();
   paintInboxBadges();
-  slog('info', 'ready', drv.on ? 'drive linked · pull/push is manual' : 'drive not linked · local only');
+  slog('info', 'ready', srv.on ? 'sync connected · pull/push is manual' : 'sync not connected · local only');
 })();
 </script>
 </body>
