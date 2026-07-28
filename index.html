@@ -479,7 +479,11 @@ body.live #notebar::before{content:'';position:absolute;left:0;right:0;top:0;hei
     linear-gradient(180deg, rgba(32,28,54,.80), rgba(21,19,36,.86));
 }
 .page.on{display:block}
-body.screen-home #top,body.screen-library #top{display:flex}
+body.screen-library #top{display:flex}
+/* Home carries its own mark inside the content now. The fixed bar sits at
+   z-index 6 under .page's 8, so here it was only ever a smudge showing
+   through frosted glass. */
+body.screen-home #top{display:none}
 body.screen-home .menu,body.screen-capture .menu{display:none}
 
 /* Home has to be able to scroll. body is a fixed app shell, so a screen that
@@ -500,41 +504,137 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 @keyframes waveScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.home-wave .wl{animation:none}}
 
-.home-in{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:min(16vh,150px) 28px 60px}
+.home-in{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:min(13vh,120px) 28px 64px}
+
+/* the wordmark: the product in one glyph — a line you cut */
+.home-mark{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.hm-name{font-family:var(--ui);font-size:11px;font-weight:600;letter-spacing:.3em;color:var(--text)}
+.hm-dot{color:var(--faint);font-size:10px}
+.hm-line{width:56px;height:14px;flex:none;overflow:visible}
+.hm-line line{stroke:var(--line2);stroke-width:1.5}
+.hm-line circle{fill:var(--cut)}
+.hm-line circle:nth-of-type(1){animation:cutPulse 3.4s ease-in-out infinite}
+.hm-line circle:nth-of-type(2){animation:cutPulse 3.4s ease-in-out .5s infinite}
+.hm-line circle:nth-of-type(3){animation:cutPulse 3.4s ease-in-out 1s infinite}
+@keyframes cutPulse{0%,72%,100%{r:2;opacity:.45}80%{r:3.2;opacity:1}}
+.home-mark .eyebrow{margin-bottom:0}
+
 #home h1{
-  font-family:var(--txt);font-weight:800;font-size:clamp(32px,6vw,62px);letter-spacing:-.038em;
+  font-family:var(--txt);font-weight:800;font-size:clamp(32px,6vw,60px);letter-spacing:-.038em;
   line-height:1.02;margin:0 0 18px;
 }
-.home-lede{margin:0 0 34px;color:var(--dim);font-size:15px;line-height:1.62;max-width:46ch}
-.home-acts{display:flex;flex-direction:column;gap:9px;max-width:520px}
-.hero{
-  display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
-  padding:22px 24px;border-radius:14px;border:1px solid var(--line2);
-  background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-  transition:.2s;
+#home h1 em{
+  font-style:normal;
+  background:linear-gradient(94deg,var(--cut) 0%,var(--play) 52%,var(--live) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 100%;animation:hueDrift 14s ease-in-out infinite alternate;
 }
-.hero:hover{transform:translateY(-2px)}
-.hero b{font-family:var(--txt);font-size:19px;font-weight:600;letter-spacing:-.02em}
-.hc-kick{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--cut)}
-#hContinue #hContinueName{font-size:21px}
-#hContinue #hContinueStats{font-family:var(--mono);font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--dim)}
-.hero span{font-family:var(--ui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
-.hero:hover{border-color:var(--cut);background:rgba(143,166,255,.06)}
-.hero:hover span{color:var(--dim)}
-.hero.alt{border-color:var(--line);background:rgba(255,255,255,.015)}
-.hero.alt:hover{border-color:var(--line2);background:rgba(255,255,255,.05)}
-.home-foot{margin-top:36px;font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
-/* Scrolling makes the screen usable; not needing to scroll makes it good.
-   The generous top padding is what pushed the tiles off a short viewport,
-   so it goes first, then the type, before anything gets cut. */
-@media (max-height:860px){.home-in{padding-top:min(9vh,72px)}}
+@keyframes hueDrift{to{background-position:100% 0}}
+.home-lede{margin:0 0 30px;color:var(--dim);font-size:15px;line-height:1.62;max-width:46ch}
+
+/* ── the tiles ──────────────────────────────────────────
+   They used to be five identical slabs, so nothing said which was the way
+   in and nothing said what any of them were. Each one now has its own
+   accent, its own mark drawn from the app's own vocabulary — cuts on a
+   line — and its own weight in the grid. */
+.home-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.tile{
+  --accent:var(--cut);
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  padding:17px 18px;border-radius:15px;text-align:left;overflow:hidden;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.016));
+  transition:transform .22s cubic-bezier(.2,.7,.3,1),border-color .22s,background .22s,box-shadow .22s;
+  animation:tileRise .42s cubic-bezier(.2,.7,.3,1) backwards;
+}
+@keyframes tileRise{from{opacity:0;transform:translateY(12px)}}
+.tile:nth-child(1){animation-delay:.02s}
+.tile:nth-child(2){animation-delay:.06s}
+.tile:nth-child(3){animation-delay:.10s}
+.tile:nth-child(4){animation-delay:.13s}
+.tile:nth-child(5){animation-delay:.16s}
+/* a hairline of the tile's own colour, so the five read as five */
+.tile::before{
+  content:'';position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent 78%);
+  opacity:.5;transition:opacity .22s;
+}
+.tile:hover,.tile:focus-visible{
+  transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 55%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.02));
+  box-shadow:0 16px 40px rgba(0,0,0,.4),0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+.tile:hover::before{opacity:1}
+.tile b{font-family:var(--txt);font-size:17px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:7px}
+.tile > span{font-family:var(--ui);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);transition:color .22s}
+.tile:hover > span{color:var(--dim)}
+.t-ico{width:26px;height:26px;margin-bottom:5px;color:var(--accent);opacity:.85;transition:.22s}
+.tile:hover .t-ico{opacity:1;transform:translateY(-1px)}
+.t-ico line,.t-ico path,.t-ico rect{stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
+.t-ico circle.f,.t-ico rect.f{fill:currentColor;stroke:none}
+
+/* pick up where you left off — the wide one, and the only one that shows
+   you your own work rather than describing itself */
+#hContinue{
+  --accent:var(--cut);grid-column:1/-1;gap:3px;padding:19px 20px 17px;
+  background:linear-gradient(135deg,rgba(143,166,255,.13),rgba(255,255,255,.02) 62%);
+  border-color:rgba(143,166,255,.3);
+}
+#hContinue::before{opacity:.85}
+.t-kick{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--cut)}
+#hContinueName{font-family:var(--txt);font-size:23px;font-weight:600;letter-spacing:-.025em}
+#hContinueStats{font-family:var(--mono);font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--dim)}
+/* the shape of the breakdown itself: every cut, where it falls */
+.t-spark{position:relative;height:26px;width:100%;margin-top:11px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.28)}
+.t-spark i{position:absolute;top:0;bottom:0;width:1.5px;margin-left:-.75px;background:var(--cut);opacity:.85;box-shadow:0 0 6px rgba(143,166,255,.5)}
+/* a light passes along the line the way a playhead would, slow enough to
+   read as breathing rather than loading */
+.t-spark::after{
+  content:'';position:absolute;top:0;bottom:0;width:2px;left:-2px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.85),transparent);
+  box-shadow:0 0 12px rgba(255,255,255,.5);opacity:.55;
+  animation:sweep 7s cubic-bezier(.5,0,.5,1) infinite;
+}
+@keyframes sweep{0%{left:-2px}70%,100%{left:calc(100% + 2px)}}
+.t-go{
+  position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid rgba(143,166,255,.4);color:var(--cut);font-size:11px;
+  background:rgba(143,166,255,.1);transition:.22s;
+}
+#hContinue:hover .t-go{background:var(--cut);color:var(--ink);border-color:var(--cut);transform:translateY(-50%) scale(1.07)}
+
+#hNew{--accent:var(--play);grid-column:1/-1;padding:15px 18px;background:linear-gradient(135deg,rgba(217,143,196,.1),rgba(255,255,255,.02) 58%);border-color:rgba(217,143,196,.24)}
+/* a wide tile with two lines in it is mostly empty, so the mark moves out
+   of the flow and becomes the thing filling that space */
+#hNew .t-ico{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:54px;height:54px;margin:0;opacity:.2}
+#hNew:hover .t-ico{opacity:.42;transform:translateY(-50%) scale(1.06)}
+#hScenes{--accent:var(--t3)}
+#hInbox{--accent:var(--live)}
+#hSync{--accent:var(--t5)}
+/* the inbox only shouts when something is actually in it */
+#hInbox.has{border-color:rgba(232,201,155,.45);background:linear-gradient(180deg,rgba(232,201,155,.1),rgba(255,255,255,.02))}
+
+.home-foot{margin-top:30px;font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+
+@media (max-width:640px){
+  .home-acts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #hSync{grid-column:1/-1;padding:15px 18px}
+  #hSync .t-ico{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:46px;height:46px;margin:0;opacity:.2}
+}
+@media (prefers-reduced-motion:reduce){
+  .tile,.hm-line circle,#home h1 em,.t-spark::after{animation:none}
+  .tile:hover{transform:none}
+}
+@media (max-height:860px){.home-in{padding-top:min(8vh,64px)}}
 @media (max-height:680px){
-  .home-in{padding-top:34px;padding-bottom:36px}
-  #home h1{font-size:clamp(24px,4.2vw,36px);margin-bottom:12px}
-  .home-lede{margin-bottom:20px;font-size:14px;line-height:1.5}
-  .hero{padding:14px 18px;gap:3px}
-  .hero b,#hContinue #hContinueName{font-size:16px}
-  .home-foot{margin-top:20px}
+  .home-in{padding-top:30px;padding-bottom:34px}
+  #home h1{font-size:clamp(24px,4.2vw,34px);margin-bottom:11px}
+  .home-lede{margin-bottom:18px;font-size:13.5px;line-height:1.5}
+  .tile{padding:12px 14px}
+  #hContinueName{font-size:19px}
+  .t-spark{height:20px;margin-top:8px}
+  .t-ico{width:20px;height:20px;margin-bottom:2px}
+  .home-foot{margin-top:18px}
 }
 
 #library{padding-bottom:80px}
@@ -1211,19 +1311,41 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     </svg>
   </div>
   <div class="home-in">
-    <span class="eyebrow" id="greet">good evening</span>
-    <h1>What are you<br>taking apart today?</h1>
+    <div class="home-mark">
+      <svg class="hm-line" viewBox="0 0 56 14" aria-hidden="true">
+        <line x1="1" y1="7" x2="55" y2="7"/>
+        <circle cx="14" cy="7" r="2"/><circle cx="29" cy="7" r="2"/><circle cx="44" cy="7" r="2"/>
+      </svg>
+      <span class="hm-name">TAPLINE</span>
+      <span class="hm-dot">·</span>
+      <span class="eyebrow" id="greet">good evening</span>
+    </div>
+    <h1>What are you<br><em>taking apart</em> today?</h1>
     <p class="home-lede">Play it once. Mark where it turns. Build the breakdown as you listen — no DAW, no timeline to fight.</p>
     <div class="home-acts">
-      <button class="hero" id="hContinue">
-        <span class="hc-kick">pick up where you left off</span>
+      <button class="tile" id="hContinue">
+        <span class="t-kick">pick up where you left off</span>
         <b id="hContinueName">—</b>
         <span id="hContinueStats">—</span>
+        <div class="t-spark" id="hSpark" aria-hidden="true"></div>
+        <span class="t-go" aria-hidden="true">▶</span>
       </button>
-      <button class="hero alt" id="hNew"><b>New breakdown</b><span>tap the cuts from scratch</span></button>
-      <button class="hero alt" id="hScenes"><b>Projects</b><span id="hScenesCount">—</span></button>
-      <button class="hero alt" id="hInbox"><b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span></button>
-      <button class="hero alt" id="hSync"><b><span id="hSyncTitle">Sync</span><span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span></button>
+      <button class="tile" id="hNew">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><circle class="f" cx="12" cy="12" r="2.6"/><path d="M6.6 12a5.4 5.4 0 0 1 5.4-5.4"/><path d="M3 12a9 9 0 0 1 9-9"/><path d="M17.4 12a5.4 5.4 0 0 1-5.4 5.4"/><path d="M21 12a9 9 0 0 1-9 9"/></svg>
+        <b>New breakdown</b><span>tap the cuts from scratch</span>
+      </button>
+      <button class="tile" id="hScenes">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><circle class="f" cx="9" cy="6" r="1.9"/><circle class="f" cx="15" cy="12" r="1.9"/><circle class="f" cx="7" cy="18" r="1.9"/></svg>
+        <b>Projects</b><span id="hScenesCount">—</span>
+      </button>
+      <button class="tile" id="hInbox">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9.5l4 4 4-4"/><line x1="3.5" y1="18.5" x2="20.5" y2="18.5"/></svg>
+        <b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span>
+      </button>
+      <button class="tile" id="hSync">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><circle class="f" cx="12" cy="12" r="3.2"/></svg>
+        <b><span id="hSyncTitle">Sync</span><span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span>
+      </button>
     </div>
     <div class="home-foot"><span id="hStore">stored on this device</span></div>
   </div>
@@ -1945,8 +2067,13 @@ function paintInboxBadges() {
   const n = unreadCount();
   /* the inbox only means anything once there is a second device to receive
      from — keep it out of the way until sync is connected */
-  const show = srv.on || inbox.length;
-  const hi = $('#hInbox'); if (hi) hi.style.display = show ? 'flex' : 'none';
+  const show = srv.on || cloud.on || inbox.length;
+  const hi = $('#hInbox');
+  if (hi) {
+    hi.style.display = show ? 'flex' : 'none';
+    /* it only earns the warm border when something is actually waiting */
+    hi.classList.toggle('has', !!n);
+  }
   const li = $('#libInbox'); if (li) li.style.display = show ? 'inline-block' : 'none';
   [['#hInboxBadge', '#hInboxSub'], ['#libInboxBadge', null]].forEach(([bid, sid]) => {
     const b = $(bid); if (!b) return;
@@ -2131,6 +2258,23 @@ function go(next) {
   if (next !== 'edit' && playing) stopPlay();
   if (next !== 'edit' && liveMode) setLive(false);
 }
+/* The one thing on this screen that is your own work rather than a label
+   for it: every cut in the project you were last in, where it actually
+   falls. Two projects never look the same, which is the point. */
+function paintHomeSpark(sc) {
+  const box = $('#hSpark'); if (!box) return;
+  box.innerHTML = '';
+  const dur = ((sc && sc.data) || {}).duration || 0;
+  const marks = sc ? sparkOf(sc) : [];
+  if (!marks.length || !dur) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  marks.forEach(m => {
+    const i = el('i');
+    i.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+    box.appendChild(i);
+  });
+}
+
 function paintHome() {
   const h = new Date().getHours();
   $('#greet').textContent = h < 5 ? 'still up' : h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : h < 22 ? 'good evening' : 'late session';
@@ -2143,6 +2287,7 @@ function paintHome() {
     $('#hContinueName').textContent = sc.name;
     $('#hContinueStats').textContent = st.cuts + ' cuts · ' + st.notes + ' notes · ' + fmtWhen(sc.updated || Date.now());
   }
+  paintHomeSpark(has ? sc : null);
   const vis = visibleScenes().length;
   $('#hScenesCount').textContent = vis + (vis === 1 ? ' project' : ' projects');
   if (cloud.on) { paintCloud(); return; }
