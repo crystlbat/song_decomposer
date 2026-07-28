@@ -380,7 +380,10 @@ body:not(.editing) .drop .edit-only{display:none}
   font-weight:600;letter-spacing:-.01em;padding:5px 3px;border-radius:4px;
 }
 .head input:hover{background:rgba(255,255,255,.05)}
-.head .x{opacity:0;font-size:15px;color:var(--faint);padding:3px 6px;transition:.15s}
+/* This was opacity:0 until you hovered the exact row, which meant the only
+   way to delete a track was to already know it was there. It is faint but
+   present now — visible enough to find, quiet enough to ignore. */
+.head .x{opacity:.42;font-size:15px;color:var(--faint);padding:3px 6px;transition:.15s}
 .head:hover .x{opacity:1}
 .head .x:hover{color:var(--play)}
 .addtrack{
@@ -4659,8 +4662,27 @@ function renderLayerBar() {
       inp.onclick = e => e.stopPropagation();
       chip.appendChild(inp);
       if (P.layers.length > 1) {
-        const x = el('span', 'x'); x.textContent = '×'; x.title = 'Delete layer';
-        x.onclick = e => { e.stopPropagation(); const nm = L.name; P.layers.splice(i, 1); P.active = clamp(P.active, 0, P.layers.length - 1); render(); save(); logHist(lib.current, 'Removed layer "' + nm + '"'); };
+        const x = el('span', 'x'); x.textContent = '×';
+        x.title = 'Delete the layer "' + L.name + '" and its notes';
+        x.onclick = function (e) {
+          e.stopPropagation();
+          /* a layer holds every note written into it — one stray click should
+             not be able to take all of them, so say what is at stake first */
+          const n = L.tracks.reduce((a, T) => a + (T.blocks || []).length, 0);
+          if (n && !this._armed) {
+            this._armed = true; this.style.color = 'var(--play)';
+            toast('delete "' + L.name + '" and ' + n + (n === 1 ? ' note' : ' notes') + '? tap × again');
+            setTimeout(() => { this._armed = false; this.style.color = ''; }, 2800);
+            return;
+          }
+          pushUndo('a layer');
+          const nm = L.name;
+          P.layers.splice(i, 1);
+          P.active = clamp(P.active, 0, P.layers.length - 1);
+          render(); save();
+          logHist(lib.current, 'Removed layer "' + nm + '"');
+          toast('deleted "' + nm + '" — undo with cmd+z');
+        };
         chip.appendChild(x);
       }
     } else {
