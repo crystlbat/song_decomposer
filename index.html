@@ -770,6 +770,28 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
    silent either way, so nothing happening and the check having failed
    looked exactly alike — and a stale list you believe is current is the
    worse of the two. */
+/* Saving is automatic, which is the point — but automatic and invisible
+   are not the same thing. This is the queue: what is still on its way up,
+   by name, and when the last one landed. */
+.save-lane{max-width:860px;margin:0 auto 4px;padding:12px 20px 0}
+.sl-head{display:flex;align-items:center;gap:9px}
+.sl-dot{width:8px;height:8px;border-radius:50%;background:var(--t3);flex:none;transition:.2s}
+.save-lane.pending .sl-dot{background:var(--live);animation:blink 1.1s steps(2,end) infinite}
+.save-lane.bad .sl-dot{background:var(--play)}
+@media (prefers-reduced-motion:reduce){.save-lane.pending .sl-dot{animation:none}}
+.sl-head b{font-family:var(--txt);font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.sl-when{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.sl-queue{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.sl-queue:empty{display:none}
+.sl-chip{
+  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;
+  border:1px solid rgba(232,201,155,.3);background:rgba(232,201,155,.08);
+  font-family:var(--ui);font-size:11px;color:var(--dim);max-width:220px;
+}
+.sl-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-chip i{width:5px;height:5px;border-radius:50%;background:var(--live);flex:none}
+@media (max-width:640px){.save-lane{padding:10px 14px 0}}
+
 /* Everything in one list meant your own work and the other device's were
    indistinguishable until you read every badge. */
 .lib-filter{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
@@ -1515,6 +1537,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div id="scPasteWrap">
     <textarea id="scPaste" placeholder="paste an exported project here" spellcheck="false"></textarea>
     <button class="btn key" id="scPasteGo">Load pasted project</button>
+  </div>
+  <div class="save-lane" id="saveLane">
+    <div class="sl-head">
+      <span class="sl-dot" id="slDot"></span>
+      <b id="slTitle">All saved</b>
+      <span class="spacer"></span>
+      <span class="sl-when" id="slWhen"></span>
+    </div>
+    <div class="sl-queue" id="slQueue"></div>
   </div>
   <div id="scList"></div>
   <p class="sc-foot">Audio isn't carried in a project — cuts, layers, tracks and notes are. Load the same track on the other device and everything lines up.</p>
@@ -3792,6 +3823,37 @@ function cardSyncState(sc) {
   return { text: done ? 'sent' : 'not sent yet', pending: !done };
 }
 
+/* The queue, in the same terms the cards use — so a project sitting in the
+   lane and the same project's card can never disagree. */
+function paintSaveLane(all) {
+  const lane = $('#saveLane'); if (!lane) return;
+  const live = cloud.on ? !!cloud.user : srv.on;
+  lane.style.display = live ? 'block' : 'none';
+  if (!live) return;
+
+  const waiting = all.filter(sc => cardSyncState(sc).pending);
+  const err = cloud.on ? cloud.err : lastErr;
+  lane.className = 'save-lane' + (err ? ' bad' : waiting.length ? ' pending' : '');
+
+  $('#slTitle').textContent = err ? "Couldn't save"
+    : waiting.length ? waiting.length + (waiting.length === 1 ? ' waiting to save' : ' waiting to save')
+    : 'All saved';
+
+  const at = cloud.on ? cloud.last : srv.last;
+  $('#slWhen').textContent = err ? err : at ? 'last saved ' + fmtWhen(at) : '';
+
+  const q = $('#slQueue'); q.innerHTML = '';
+  waiting.slice(0, 6).forEach(sc => {
+    const c = el('div', 'sl-chip');
+    const d = el('i'), n = el('span'); n.textContent = sc.name || 'Untitled';
+    c.append(d, n); q.appendChild(c);
+  });
+  if (waiting.length > 6) {
+    const c = el('div', 'sl-chip'); const n = el('span');
+    n.textContent = '+' + (waiting.length - 6) + ' more'; c.appendChild(n); q.appendChild(c);
+  }
+}
+
 let libFilter = 'all';
 $('#libFilter').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -3810,6 +3872,8 @@ function renderScenes() {
   if (!worth) libFilter = 'all';
   [...$('#libFilter').children].forEach(b => b.classList.toggle('on', b.dataset.f === libFilter));
   const shown = libFilter === 'mine' ? mine : libFilter === 'theirs' ? theirs : all;
+
+  paintSaveLane(all);
 
   shown.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).forEach(sc => {
     const isCur = sc.id === lib.current;
