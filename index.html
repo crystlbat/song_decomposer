@@ -259,6 +259,14 @@ body:not(.editing) .drop .edit-only{display:none}
 .tl-row.on{background:color-mix(in srgb,var(--c) 13%,transparent)}
 .tl-row i{position:absolute;top:4px;bottom:4px;width:2px;margin-left:-1px;background:var(--c);border-radius:2px}
 .tl-row.on i{top:2px;bottom:2px;box-shadow:0 0 6px var(--c)}
+.tl-x{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:3;
+  font-size:14px;line-height:1;color:var(--faint);padding:2px 7px;border-radius:5px;
+  opacity:0;transition:.15s;cursor:pointer;
+}
+.tl-row:hover .tl-x{opacity:1}
+.tl-x:hover{color:var(--play);background:rgba(255,255,255,.08)}
+@media (pointer:coarse){.tl-x{opacity:.65;font-size:17px;padding:4px 9px}}
 .tl-row u{
   position:absolute;left:8px;top:50%;transform:translateY(-50%);text-decoration:none;z-index:2;
   font-family:var(--ui);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
@@ -288,16 +296,23 @@ body:not(.editing) .drop .edit-only{display:none}
 #overlayBtn{font-size:9.5px}
 
 #tlwrap{
-  flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:150px;
+  flex:1;overflow-y:auto;overflow-x:hidden;
   background:
     radial-gradient(120% 70% at 50% 0%, rgba(155,140,255,.10), transparent 60%),
     linear-gradient(180deg, rgba(34,31,53,.52), rgba(23,21,38,.30));
 }
-.tl{display:flex;min-height:100%}
+/* the run-off room used to be padding on the scroller, which put it
+   outside .tl — so the track column's background stopped short of the
+   bottom and read as a panel floating above nothing */
+.tl{display:flex;min-height:100%;padding-bottom:150px;box-sizing:content-box}
+.side,.scroller{margin-bottom:-150px;padding-bottom:150px}
 .side{
   width:var(--side-w);flex:none;border-right:1px solid var(--line);position:relative;z-index:3;
   background:linear-gradient(180deg, rgba(40,35,64,.62), rgba(26,23,42,.42));backdrop-filter:blur(10px);
 }
+/* stands in for .tl-strip on the scroller side: without it every track
+   header sat above its own lane by the height of the timeline strip */
+.side-strip{border-bottom:1px solid var(--line);background:rgba(0,0,0,.16)}
 .side-top{height:var(--ruler-h);border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;padding:0 16px;gap:6px}
 .side-top .lbl{font-family:var(--ui);font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
 .side-top .val{font-family:var(--mono);font-size:22px;color:var(--text)}
@@ -1339,6 +1354,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
           <div class="lbl">cuts</div>
           <div class="val" id="cutCount">0</div>
         </div>
+        <div class="side-strip" id="sideStrip"></div>
         <div id="heads"></div>
         <button class="addtrack" id="addTrack">＋ Add track</button>
       </div>
@@ -2493,7 +2509,12 @@ function go(next) {
   $('#editor').classList.toggle('on', next === 'edit');
   if (next === 'home') paintHome();
   if (next === 'send') paintSend();
-  if (next === 'library') renderScenes();
+  if (next === 'library') {
+    renderScenes();
+    /* Opening the list is the moment you want it to be true. Asking for a
+       pull by hand was a leftover from when nothing synced on its own. */
+    if (cloud.on && cloud.user && !cloud.busy && Date.now() - cloud.lastPull > 10000) cloudPull(true);
+  }
   if (next === 'edit') { fit(); render(); ytSync(); }
   if (next !== 'edit' && playing) stopPlay();
   if (next !== 'edit' && liveMode) setLive(false);
@@ -2934,7 +2955,13 @@ function mergeScenes(localScenes, incoming, sinceSync) {
     }
     const remoteNewer = (s.updated || 0) > (p.updated || 0);
     const localMovedToo = (p.updated || 0) > (sinceSync || 0);
-    if (remoteNewer && localMovedToo && !p.deleted && !s.deleted) {
+    /* Timestamps alone are not a conflict. Saving is automatic now, so
+       `updated` moves on both devices constantly and this used to fork on
+       almost any concurrent activity — leaving two copies of the same song
+       with the same notes in them, which is worse than no merge at all.
+       Fork only when the two versions genuinely differ. */
+    const reallyDiffers = JSON.stringify(p.data) !== JSON.stringify(s.data);
+    if (remoteNewer && localMovedToo && reallyDiffers && !p.deleted && !s.deleted) {
       const fork = Object.assign({}, s, { id: uid() });
       forks.push(fork); m[fork.id] = fork;
       arrivals.push({ kind: 'both', sceneId: p.id, forkId: fork.id, name: p.name,
@@ -4492,7 +4519,12 @@ function addTrack(name, L) {
   save();
   logHist(lib.current, 'Added track "' + nm + '"');
 }
-$('#addTrack').onclick = () => { addTrack(); render(); };
+$('#addTrack').onclick = () => {
+  addTrack(); render();
+  /* the pill row is built from the layer's tracks, so it goes stale the
+     moment one is added while live notes are open */
+  if (noteOpen) paintNote();
+};
 $('#newLayer').onclick = () => {
   const src = curLayer();
   const tracks = src.tracks.map(T => ({ id: uid(), key: T.key || T.id, name: T.name, color: T.color, vibe: T.vibe, blocks: [] }));
@@ -4588,8 +4620,29 @@ function renderTLStrip() {
     const tag = el('u'); tag.textContent = t.name; row.appendChild(tag);
     t.marks.forEach(m => { const tick = el('i'); tick.style.left = t2x(m) + 'px'; row.appendChild(tick); });
     row.onclick = () => { if (i !== P.activeTL) { setActiveTL(i); recalc(); render(); save(); } };
+    /* you can record a timeline from a phone now, so there had to be a way
+       to get rid of one. Never the last: a project is its cuts. */
+    if (P.timelines.length > 1) {
+      const x = el('span', 'tl-x'); x.textContent = '\u00d7';
+      x.title = 'Delete "' + t.name + '"';
+      x.onclick = e => {
+        e.stopPropagation();
+        if (!confirm('Delete the timeline "' + t.name + '" and its ' + t.marks.length + ' cuts?')) return;
+        pushUndo('timeline');
+        P.timelines.splice(i, 1);
+        setActiveTL(Math.min(P.activeTL, P.timelines.length - 1));
+        recalc(); render(); save();
+        logHist(lib.current, 'Removed timeline "' + t.name + '"');
+        toast('deleted "' + t.name + '" — undo with cmd+z');
+      };
+      row.appendChild(x);
+    }
     box.appendChild(row);
   });
+  /* match the side column to it, so heads and lanes line up whatever the
+     number of timelines */
+  const sp = $('#sideStrip');
+  if (sp) sp.style.height = Math.max(0, box.offsetHeight - 1) + 'px';
 }
 function renderLayerBar() {
   const c = $('#chips'); c.innerHTML = '';
