@@ -497,13 +497,14 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 
 #library{padding-bottom:80px}
 .lib-head{
-  display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 62px 14px 20px;border-bottom:1px solid var(--line);
   position:sticky;top:0;background:linear-gradient(180deg,rgba(46,40,74,.92),rgba(32,28,52,.86));
   backdrop-filter:blur(16px);z-index:2;
 }
-#library .sc-bar,#library #scPasteWrap,#library #scList,#library .sc-foot,#syncPanel{max-width:860px;margin:0 auto}
-#syncPanel{display:none;padding:16px 20px;border-bottom:1px solid var(--line)}
-#syncPanel.on{display:block}
+#library .sc-bar,#library #scPasteWrap,#library #scList,#library .sc-foot{max-width:860px;margin:0 auto}
+/* connecting a database has nothing to do with browsing projects, so it is
+   its own screen rather than a drawer that pushes the list around */
+.sync-in{max-width:860px;margin:0 auto;padding:min(9vh,70px) 24px 60px}
 .dp-note{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--dim);max-width:70ch}
 .dp-note b{color:var(--text);font-weight:600}
 .dp-note i{font-style:normal;color:var(--cut)}
@@ -603,6 +604,9 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #sceneBtn span{color:var(--faint);font-size:8px}
 #sceneBtn:hover{border-color:var(--line2)}
 .sc-title{font-family:var(--ui);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--cut)}
+/* a hairline between the way out and the name of where you are, so the two
+   stop reading as a pair of buttons jammed together */
+.lib-rule{width:1px;height:17px;background:var(--line2);flex:none}
 .sc-bar{display:flex;gap:7px;padding:16px 20px;flex-wrap:wrap}
 #scPasteWrap{display:none;padding:0 20px 14px;gap:8px;flex-direction:column}
 #scPasteWrap.on{display:flex}
@@ -1090,56 +1094,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div id="library" class="page">
   <div class="lib-head">
     <button class="btn ghost" id="libBack">← home</button>
+    <span class="lib-rule"></span>
     <span class="sc-title">projects</span>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
-    <button class="btn" id="syncSetup">Connect sync</button>
-  </div>
-
-  <div id="syncPanel">
-    <p class="dp-note">Your projects live in <b>your own MongoDB</b>, one document per project. Every device reads and writes that one collection. Nothing moves on its own — you send and get work when you want to.</p>
-    <div class="dp-cards">
-      <div class="dp-card" id="dpCardFirst">
-        <span class="dp-n">1</span>
-        <b>Set up the first device</b>
-        <p>One-time: put the sync endpoint online and paste its address here.</p>
-        <div class="dp-row">
-          <input id="dpId" placeholder="https://your-endpoint/?key=…" spellcheck="false" autocomplete="off">
-          <button class="btn key" id="dpConnect">Connect</button>
-        </div>
-        <button class="btn ghost" id="dpHow">Show me how to get that address</button>
-      </div>
-      <div class="dp-card" id="dpCardNext">
-        <span class="dp-n">2</span>
-        <b>Add your phone or tablet</b>
-        <p>Nothing to type — show a code and point the other device's camera at it.</p>
-        <button class="btn key" id="dpPairBig">Pair a device</button>
-      </div>
-    </div>
-    <div class="dp-row" id="dpLive">
-      <span id="dpStatus">not linked</span>
-      <span class="spacer"></span>
-      <button class="btn key" id="dpPull">Pull</button>
-      <button class="btn" id="dpPush">Push</button>
-      <button class="btn" id="dpPair">Pair a device</button>
-      <button class="btn ghost" id="dpLogs">Technical log</button>
-      <button class="btn ghost" id="dpOut">Unlink</button>
-    </div>
-    <div id="dpSetup">
-      <ol class="dp-steps">
-        <li>Make a free cluster at <b>mongodb.com/atlas</b> → <b>Connect → Drivers</b> → copy the connection string. Under <b>Network Access</b>, allow <b>0.0.0.0/0</b> — a function gets a different address on every call, so the key in step 2 is what actually guards this.</li>
-        <li>Put the code below online with <b>MONGODB_URI</b> set to that connection string and <b>TAPLINE_KEY</b> set to a long random string you invent.</li>
-        <li>Paste the address it answers on, with <b>?key=</b><i>that same key</i> on the end, above — on the laptop and the tablet.</li>
-      </ol>
-      <p class="dp-note">The connection string never leaves your server. This page only ever holds the https address and the key in it.</p>
-      <div class="dp-tabs">
-        <button class="on" id="dpKindFn">a netlify function</button>
-        <button id="dpKindNode">a node server</button>
-      </div>
-      <p class="dp-kindnote" id="dpKindNote">One file in your <b>Netlify</b> site, at <b>netlify/functions/tapline.js</b>. Nothing to keep alive and free while it sits idle; the first call after a quiet spell takes a second or two to wake.</p>
-      <pre id="dpCode"></pre>
-      <button class="btn" id="dpCopyCode">Copy the code</button>
-    </div>
+    <button class="btn" id="syncSetup">Sync</button>
   </div>
 
   <div class="sc-bar">
@@ -1184,6 +1143,59 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="spPair">Pair a device</button>
     <span class="spacer" style="flex:1"></span>
     <button id="spLog">Technical log</button>
+  </div>
+</div>
+
+<div id="sync" class="page">
+  <div class="sync-in">
+    <div class="ib-head">
+      <span class="eyebrow" style="margin-bottom:0">sync</span>
+      <span class="spacer"></span>
+      <button class="btn" id="syncClose">Close</button>
+    </div>
+    <p class="dp-note">Your projects live in <b>your own MongoDB</b>, one document per project. Every device reads and writes that one collection. Nothing moves on its own — you send and get work when you want to.</p>
+    <div class="dp-cards">
+      <div class="dp-card" id="dpCardFirst">
+        <span class="dp-n">1</span>
+        <b>Set up the first device</b>
+        <p>One-time: put the sync endpoint online and paste its address here.</p>
+        <div class="dp-row">
+          <input id="dpId" placeholder="https://your-endpoint/?key=…" spellcheck="false" autocomplete="off">
+          <button class="btn key" id="dpConnect">Connect</button>
+        </div>
+        <button class="btn ghost" id="dpHow">Show me how to get that address</button>
+      </div>
+      <div class="dp-card" id="dpCardNext">
+        <span class="dp-n">2</span>
+        <b>Add your phone or tablet</b>
+        <p>Nothing to type — show a code and point the other device's camera at it.</p>
+        <button class="btn key" id="dpPairBig">Pair a device</button>
+      </div>
+    </div>
+    <div class="dp-row" id="dpLive">
+      <span id="dpStatus">not linked</span>
+      <span class="spacer"></span>
+      <button class="btn key" id="dpPull">Pull</button>
+      <button class="btn" id="dpPush">Push</button>
+      <button class="btn" id="dpPair">Pair a device</button>
+      <button class="btn ghost" id="dpLogs">Technical log</button>
+      <button class="btn ghost" id="dpOut">Unlink</button>
+    </div>
+    <div id="dpSetup">
+      <ol class="dp-steps">
+        <li>Make a free cluster at <b>mongodb.com/atlas</b> → <b>Connect → Drivers</b> → copy the connection string. Under <b>Network Access</b>, allow <b>0.0.0.0/0</b> — a function gets a different address on every call, so the key in step 2 is what actually guards this.</li>
+        <li>Put the code below online with <b>MONGODB_URI</b> set to that connection string and <b>TAPLINE_KEY</b> set to a long random string you invent.</li>
+        <li>Paste the address it answers on, with <b>?key=</b><i>that same key</i> on the end, above — on the laptop and the tablet.</li>
+      </ol>
+      <p class="dp-note">The connection string never leaves your server. This page only ever holds the https address and the key in it.</p>
+      <div class="dp-tabs">
+        <button class="on" id="dpKindFn">a netlify function</button>
+        <button id="dpKindNode">a node server</button>
+      </div>
+      <p class="dp-kindnote" id="dpKindNote">One file in your <b>Netlify</b> site, at <b>netlify/functions/tapline.js</b>. Nothing to keep alive and free while it sits idle; the first call after a quiet spell takes a second or two to wake.</p>
+      <pre id="dpCode"></pre>
+      <button class="btn" id="dpCopyCode">Copy the code</button>
+    </div>
   </div>
 </div>
 
@@ -1401,7 +1413,7 @@ function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
 $('#logsClose').onclick = () => $('#logs').classList.remove('on');
 $('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
 $('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
-$('#ibPull').onclick = () => { if (!srv.on) { closeInbox(); go('library'); $('#syncPanel').classList.add('on'); return toast('Connect your sync address first'); } syncPull(); };
+$('#ibPull').onclick = () => { if (!srv.on) { closeInbox(); setupSync(); return toast('Connect your sync address first'); } syncPull(); };
 $('#logPull').onclick = () => syncPull();
 $('#logPush').onclick = () => syncPush();
 $('#logCopy').onclick = () => {
@@ -1698,7 +1710,7 @@ $('#sdName').addEventListener('input', () => {
 });
 $('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
 $('#sdSend').onclick = async () => {
-  if (!srv.on) { go('library'); $('#syncPanel').classList.add('on'); $('#dpId').focus(); return; }
+  if (!srv.on) { setupSync(); return; }
   const st = $('#sdState'), btn = $('#sdSend');
   st.className = 'sd-state'; st.textContent = 'sending…';
   btn.disabled = true;
@@ -1925,6 +1937,7 @@ function go(next) {
   $('#home').classList.toggle('on', next === 'home');
   $('#library').classList.toggle('on', next === 'library');
   $('#send').classList.toggle('on', next === 'send');
+  $('#sync').classList.remove('on');   /* a destination, not a modal — never leave it stuck over a new screen */
   $('#stage').classList.toggle('gone', next !== 'capture');
   $('#editor').classList.toggle('on', next === 'edit');
   if (next === 'home') paintHome();
@@ -2526,7 +2539,11 @@ function paintSync(err) {
   const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && srv.on) ? 'synced with your database when you ask' : 'stored on this device';
   paintInboxBadges();
 }
-$('#syncSetup').onclick = () => $('#syncPanel').classList.toggle('on');
+function openSync() { closeSyncPop(); $('#sync').classList.add('on'); paintSync(); }
+function closeSync() { $('#sync').classList.remove('on'); }
+$('#syncSetup').onclick = openSync;
+$('#syncClose').onclick = closeSync;
+$('#sync').onclick = e => { if (e.target.id === 'sync') closeSync(); };
 /* The sync popover — the whole point is that you never have to leave what
    you are doing, or read a log, to send work or find out whether it went. */
 function syncStatus() {
@@ -2567,8 +2584,7 @@ $('#spPush').onclick = async () => { if (!srv.on || syncGone) return setupSync()
 $('#spPair').onclick = () => { closeSyncPop(); srv.on ? openPair() : setupSync(); };
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
 function setupSync() {
-  closeSyncPop(); go('library');
-  $('#syncPanel').classList.add('on');
+  openSync();
   const f = $('#dpId'); if (f) f.focus();
 }
 
@@ -2776,7 +2792,7 @@ $('#capBack').onclick = cancelCapture;
 $('#mKeys').onclick = () => $('#keys').classList.add('on');
 $('#keysClose').onclick = () => $('#keys').classList.remove('on');
 $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.remove('on'); };
-$('#libBack').onclick = () => go(P.markers.length ? workScreen() : 'home');
+$('#libBack').onclick = () => go('home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id; claimMine(sc.id);
@@ -4057,7 +4073,8 @@ addEventListener('keydown', e => {
     if ($('#inbox').classList.contains('on')) { closeInbox(); return; }
     if ($('#logs').classList.contains('on')) { $('#logs').classList.remove('on'); return; }
     if ($('#keys').classList.contains('on')) { $('#keys').classList.remove('on'); return; }
-    if (screen === 'library') { go(P.markers.length ? workScreen() : 'home'); return; }
+    if ($('#sync').classList.contains('on')) { closeSync(); return; }
+    if (screen === 'library') { go('home'); return; }
     if (screen === 'home') return;
     if (screen === 'capture' && mode !== 'rec') { cancelCapture(); return; }
     if (mode === 'rec') { e.preventDefault(); endRec(); } else { select(null); clearAux(); }

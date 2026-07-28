@@ -30,6 +30,7 @@ The same scene travels between them. Audio does not — load the same track on e
 - **Editor** — the timeline. Add tracks, drag cuts, write notes into sections. Type any letter to start a note on the armed track.
 - **Send** — appears instead of the editor on small screens: cut count, name, one Send button. Toggle it manually with **Compact capture** in the ⋯ menu.
 - **Scenes** — every breakdown, with rename / duplicate / export / history.
+- **Sync** — its own screen: connect a database, pair a device, the endpoint code. Reached from **Sync** on the home screen or in the projects header.
 - **Inbox** — what a pull brought in (see below).
 - **Sync log** — every network request, kept across reloads, for when sync itself is the question.
 
@@ -50,9 +51,9 @@ The browser never touches the database. A connection string carries the database
 ### Setting it up
 
 1. Make a free cluster at **mongodb.com/atlas** → **Connect → Drivers** → copy the connection string. Under **Network Access**, allow `0.0.0.0/0` — a serverless function gets a different address on every call, so the key in step 3 is what actually guards this.
-2. Copy the endpoint code from the app: **projects → Connect sync → "Show me how to get that address" → Copy the code**.
+2. Copy the endpoint code from the app: **Sync → "Show me how to get that address" → Copy the code**.
 3. Put it online with `MONGODB_URI` set to that connection string and `TAPLINE_KEY` set to a long random string you invent.
-4. Paste the address it answers on, with `?key=` *that same key* on the end, into **projects → Connect sync** on the first device.
+4. Paste the address it answers on, with `?key=` *that same key* on the end, into **Sync** on the first device.
 
 Two host shapes ship in the app, same storage and same merge rule in both:
 
@@ -65,7 +66,7 @@ Both speak the same two calls: `GET` returns every project, `POST` merges what y
 
 ### Pairing the rest (don't retype that address)
 
-Typing an endpoint URL and its key into a phone is miserable, so you only ever do it once. On the connected device open **projects → Connect sync → Pair a device**: it shows a QR code and a one-tap link.
+Typing an endpoint URL and its key into a phone is miserable, so you only ever do it once. On the connected device open **Sync → Pair a device**: it shows a QR code and a one-tap link.
 
 - **Phone / tablet** — point the camera at the QR. Tapline opens already connected.
 - **Anything without a camera** — hit **Copy link**, send it to yourself, open it there.
