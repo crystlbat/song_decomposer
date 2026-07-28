@@ -766,6 +766,18 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 .sc-title{font-family:var(--ui);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--cut)}
 /* a hairline between the way out and the name of where you are, so the two
    stop reading as a pair of buttons jammed together */
+/* Opening this list checks for your other device's work. That check was
+   silent either way, so nothing happening and the check having failed
+   looked exactly alike — and a stale list you believe is current is the
+   worse of the two. */
+.lib-check{
+  font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);white-space:nowrap;transition:color .2s,opacity .3s;opacity:0;
+}
+.lib-check.on{opacity:1}
+.lib-check.busy{color:var(--cut)}
+.lib-check.bad{color:var(--live);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.lib-check{display:none}}
 .lib-rule{width:1px;height:17px;background:var(--line2);flex:none}
 .sc-bar{display:flex;gap:7px;padding:16px 20px;flex-wrap:wrap}
 #scPasteWrap{display:none;padding:0 20px 14px;gap:8px;flex-direction:column}
@@ -1472,6 +1484,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button class="btn ghost" id="libBack">← home</button>
     <span class="lib-rule"></span>
     <span class="sc-title">projects</span>
+    <span class="lib-check" id="libCheck"></span>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
     <button class="btn" id="syncSetup">Sync</button>
@@ -2156,6 +2169,32 @@ function paintSendSpark() {
   });
 }
 
+/* Says what the check on opening Projects actually did. A failure has to
+   be visible here: the account indicator only ever talks about saving, so
+   "not saved" is no way to learn that the list you are reading is stale. */
+function paintLibCheck(state, detail) {
+  const e = $('#libCheck'); if (!e) return;
+  e.className = 'lib-check' + (state ? ' on' : '') + (state === 'busy' ? ' busy' : '') + (state === 'bad' ? ' bad' : '');
+  e.textContent = state === 'busy' ? 'checking…'
+    : state === 'bad' ? "couldn't check · retry"
+    : state === 'ok' ? (detail || 'up to date')
+    : '';
+  e.onclick = state === 'bad' ? () => checkOnOpen(true) : null;
+}
+
+async function checkOnOpen(force) {
+  if (!cloud.on || !cloud.user || cloud.busy) return;
+  if (!force && Date.now() - cloud.lastPull < 10000) return paintLibCheck('ok', 'checked just now');
+  paintLibCheck('busy');
+  const before = lib.scenes.length;
+  const got = await cloudPull(true);
+  if (!got) return paintLibCheck('bad');
+  const gained = lib.scenes.length - before;
+  paintLibCheck('ok', gained > 0 ? gained + (gained === 1 ? ' new project' : ' new projects') : 'up to date');
+  /* it has said its piece — do not leave a stale line sitting there */
+  setTimeout(() => { if (screen === 'library') paintLibCheck(''); }, 4000);
+}
+
 function paintSend() {
   $('#send').classList.remove('done');
   const cuts = (P.markers || []).length;
@@ -2516,7 +2555,7 @@ function go(next) {
     renderScenes();
     /* Opening the list is the moment you want it to be true. Asking for a
        pull by hand was a leftover from when nothing synced on its own. */
-    if (cloud.on && cloud.user && !cloud.busy && Date.now() - cloud.lastPull > 10000) cloudPull(true);
+    checkOnOpen();
   }
   if (next === 'edit') { fit(); render(); ytSync(); }
   if (next !== 'edit' && playing) stopPlay();
