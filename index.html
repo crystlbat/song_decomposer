@@ -2551,6 +2551,15 @@ $('#dpCopyCode').onclick = () => navigator.clipboard.writeText(scriptKind === 's
   .then(() => toast('code copied'), () => toast('copy blocked by the browser'));
 $('#dpConnect').onclick = async () => {
   const u = $('#dpId').value.trim();
+  /* Apps Script shows two URLs and only one of them can ever work here:
+     /dev is the head/test deployment and always demands a signed-in editor,
+     so it can never answer an anonymous request from this app. Say so
+     rather than repeating "paste the /exec url" at someone who thinks
+     they did. */
+  if (/\/dev(\?|#|$)/.test(u)) {
+    slog('err', 'that is the /dev test URL', 'it only answers a signed-in editor — use the /exec URL');
+    return toast('that is the test URL — use the /exec one from Deploy → Manage deployments');
+  }
   if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) return toast('paste the /exec url from your deployment');
   drv.url = u; drv.on = true; lastErr = ''; saveDrv();
   slog('info', 'linking', u);
