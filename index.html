@@ -31,6 +31,7 @@
   --mono:'Martian Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --txt:'Poppins', system-ui, -apple-system, sans-serif;
 
+  --barpad:16px;          /* the left inset every top bar shares */
   --lane-h:92px;
   --grp-h:32px;
   --ruler-h:104px;
@@ -193,17 +194,24 @@ body:not(.editing) .drop .edit-only{display:none}
 #editor{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;opacity:0;transition:opacity .45s ease .1s}
 #editor.on{display:flex;opacity:1}
 #toolbar{
-  display:flex;align-items:center;gap:12px;height:var(--bar);padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:12px;height:var(--bar);padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(18px);
   background:linear-gradient(180deg, rgba(48,42,76,.72), rgba(30,27,48,.58));
+  /* The row is denser than a tablet is wide, and with nothing to shrink into
+     the last controls were quietly clipped off the right edge. Let it scroll
+     rather than squash the buttons or hide them: everything stays reachable
+     at any width, without a scrollbar drawn across the chrome. */
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
 }
+#toolbar::-webkit-scrollbar{display:none}
+#toolbar > *:not(.spacer){flex:0 0 auto}
 #posLabel{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.02em}
 #audioName{
   font-family:var(--ui);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
   max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 #tlbar{
-  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
   background:linear-gradient(180deg, rgba(44,39,70,.6), rgba(32,28,52,.42));
 }
@@ -227,7 +235,7 @@ body:not(.editing) .drop .edit-only{display:none}
 .tl-chip .x{color:var(--faint);font-size:14px;line-height:1;padding:0 2px}
 .tl-chip .x:hover{color:var(--play)}
 .tl-hint{font-family:var(--ui);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-@media (max-width:900px){.tl-hint{display:none}#tlbar{padding-left:12px;gap:8px}}
+@media (max-width:900px){.tl-hint{display:none}#tlbar{gap:8px}}
 @media (pointer:coarse){.tl-chip{height:38px;padding:0 14px}}
 
 /* the stacked view: every timeline you tapped, side by side, unmerged */
@@ -245,7 +253,7 @@ body:not(.editing) .drop .edit-only{display:none}
 }
 .tl-row.on u{color:var(--text)}
 #layerbar{
-  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
   background:linear-gradient(180deg, rgba(38,34,60,.55), rgba(28,25,45,.38));
 }
@@ -461,7 +469,16 @@ body.live #notebar::before{content:'';position:absolute;left:0;right:0;top:0;hei
 body.screen-home #top,body.screen-library #top{display:flex}
 body.screen-home .menu,body.screen-capture .menu{display:none}
 
-#home{position:relative;overflow:hidden}
+/* Home has to be able to scroll. body is a fixed app shell, so a screen that
+   turns its own overflow off has no second chance: on a laptop at 680px, in
+   landscape on a phone, on anything short, the tiles below the fold were
+   simply unreachable and the only way to see them was to zoom the browser
+   out. The waves stay clipped by their own container. */
+   The position:relative that used to be here was the whole bug: it undid
+   .page's fixed inset:0, so the screen had no height to overflow *within*
+   and simply grew until body clipped it. It never needed to be positioned —
+   .page is already a containing block for the waves. */
+#home{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .home-wave{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .home-wave .wl{position:absolute;left:0;width:200%;fill:none;stroke-width:2;stroke-linecap:round}
 .home-wave .wl1{top:12%;height:130px;stroke:var(--cut);opacity:.16;animation:waveScroll 52s linear infinite}
@@ -494,6 +511,18 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 .hero.alt{border-color:var(--line);background:rgba(255,255,255,.015)}
 .hero.alt:hover{border-color:var(--line2);background:rgba(255,255,255,.05)}
 .home-foot{margin-top:36px;font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+/* Scrolling makes the screen usable; not needing to scroll makes it good.
+   The generous top padding is what pushed the tiles off a short viewport,
+   so it goes first, then the type, before anything gets cut. */
+@media (max-height:860px){.home-in{padding-top:min(9vh,72px)}}
+@media (max-height:680px){
+  .home-in{padding-top:34px;padding-bottom:36px}
+  #home h1{font-size:clamp(24px,4.2vw,36px);margin-bottom:12px}
+  .home-lede{margin-bottom:20px;font-size:14px;line-height:1.5}
+  .hero{padding:14px 18px;gap:3px}
+  .hero b,#hContinue #hContinueName{font-size:16px}
+  .home-foot{margin-top:20px}
+}
 
 #library{padding-bottom:80px}
 .lib-head{
@@ -934,9 +963,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 @media (max-width:1180px){:root{--side-w:176px}}
 @media (max-width:900px){
-  :root{--side-w:158px;--ruler-h:96px}
+  :root{--side-w:158px;--ruler-h:96px;--barpad:12px}
   #audioName{display:none}
-  #toolbar,#layerbar{gap:8px;padding-left:12px}
+  #toolbar,#layerbar{gap:8px}
   .cap-idle h1{font-size:clamp(26px,6.4vw,44px)}
 }
 @media (max-height:560px){
@@ -948,6 +977,20 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 @media (max-width:760px){.nb-hint{display:none}}
 @media (max-width:640px){:root{--side-w:140px}.sub{display:none}#capUI{padding:16px}}
+/* On a phone the zoom buttons are the one cluster with a better gesture
+   behind it — pinch the timeline, or + and − on a keyboard. Dropping them
+   is what stops the toolbar needing to be scrolled on every session. */
+@media (max-width:700px){#zoomCtl{display:none}}
+/* viewport-fit=cover was set but never paid for: on a notched phone the
+   content ran under the rounded corners and the home indicator. */
+@supports (padding:env(safe-area-inset-left)){
+  .page{
+    padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #toolbar,#tlbar,#layerbar{padding-left:calc(var(--barpad) + env(safe-area-inset-left))}
+  #notebar{bottom:calc(20px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -1023,7 +1066,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span id="audioName"></span>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
-    <div class="seg-ctl">
+    <div class="seg-ctl" id="zoomCtl">
       <button id="zoomOut" title="Zoom out">−</button>
       <button id="zoomFit" title="Fit to width">FIT</button>
       <button id="zoomIn" title="Zoom in">+</button>
