@@ -3745,6 +3745,23 @@ document.addEventListener('focusout', e => {
   setTimeout(() => { if (scenesStale && !scenesBusy()) renderScenesIfIdle(); }, 0);
 });
 
+/* What a project card says about where it lives. This used to measure every
+   project against srv.last — the endpoint-address build's clock — which the
+   account build never touches. Anyone who had once connected the old ?key=
+   address still had srv.on true and a stale srv.last, so every card read
+   "not sent yet" forever no matter how well the account had saved it. */
+function cardSyncState(sc) {
+  const at = sc.updated || 0;
+  if (cloud.on) {
+    if (!cloud.user) return { text: 'on this device', pending: false };
+    const done = at <= (cloud.last || 0);
+    return { text: done ? 'saved' : 'saving…', pending: !done };
+  }
+  if (!srv.on) return { text: 'on this device', pending: false };
+  const done = at <= (srv.last || 0);
+  return { text: done ? 'sent' : 'not sent yet', pending: !done };
+}
+
 function renderScenes() {
   const box = $('#scList'); if (!box) return;
   box.innerHTML = '';
@@ -3820,9 +3837,10 @@ function renderScenes() {
 
     const spacer = el('div', 'sc-spacer');
 
-    const cloud = el('span', 'sc-cloud' + (srv.on && (sc.updated || 0) > srv.last ? ' pending' : ''));
-    const dot = el('i'); cloud.appendChild(dot);
-    cloud.appendChild(document.createTextNode(!srv.on ? 'on this device' : (sc.updated || 0) > srv.last ? 'not sent yet' : 'sent'));
+    const st = cardSyncState(sc);
+    const cloudTag = el('span', 'sc-cloud' + (st.pending ? ' pending' : ''));
+    const dot = el('i'); cloudTag.appendChild(dot);
+    cloudTag.appendChild(document.createTextNode(st.text));
 
     const cta = el('div', 'sc-cta');
     const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open timeline';
@@ -3864,7 +3882,7 @@ function renderScenes() {
       });
     }
 
-    card.append(top, meta, midIcons, spacer, cloud, cta, histBox);
+    card.append(top, meta, midIcons, spacer, cloudTag, cta, histBox);
     box.appendChild(card);
   });
 }
