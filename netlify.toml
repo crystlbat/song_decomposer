@@ -1,0 +1,5 @@
+# The app is a static file, so there is nothing to build — Netlify serves the
+# repo as-is and bundles the one function beside it.
+[build]
+  publish = "."
+  functions = "netlify/functions"

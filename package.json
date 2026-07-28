@@ -1,0 +1,8 @@
+{
+  "name": "tapline-sync",
+  "private": true,
+  "description": "Sync endpoint for Tapline — the app itself is still one dependency-free index.html",
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  }
+}
