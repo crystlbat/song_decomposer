@@ -729,6 +729,33 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #savedTag.on{opacity:1}
 @media (max-width:900px){#savedTag{display:none}}
 
+/* ── the login screen, on the build that has accounts ── */
+#auth{z-index:60;background:
+  radial-gradient(90% 60% at 50% 0%, rgba(155,140,255,.20), transparent 62%),
+  linear-gradient(180deg,#1B1E33 0%,#12131F 62%,#0E0F19 100%)}
+.au-in{max-width:400px;margin:0 auto;padding:min(12vh,110px) 22px 48px}
+.au-in h1{font-size:clamp(28px,5vw,38px);font-weight:700;letter-spacing:-.03em;margin:0 0 10px}
+.au-lede{margin:0 0 26px;font-size:14px;line-height:1.55;color:var(--dim)}
+.au-form{display:flex;flex-direction:column;gap:11px}
+.au-f{display:flex;flex-direction:column;gap:6px}
+.au-f span{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.au-f input{
+  font-family:var(--txt);font-size:16px;padding:13px 14px;border-radius:10px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);
+}
+.au-f input:focus{outline:none;border-color:var(--cut);background:rgba(143,166,255,.07)}
+.au-form .btn{justify-content:center;text-align:center;padding:14px;min-height:46px}
+.au-err{min-height:16px;font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.4}
+.au-err.bad{color:var(--live)}
+.au-foot{margin:26px 0 0;font-size:12px;line-height:1.6;color:var(--faint)}
+.au-foot button{
+  display:block;margin-top:9px;font-family:var(--ui);font-size:9px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line2);padding-bottom:2px;
+}
+.au-foot button:hover{color:var(--text)}
+/* the account build has no Drive URL to paste and no device to pair */
+body.cloud #driveBtn,body.cloud #drivePanel{display:none}
+
 /* ── pairing ────────────────────────────────────────── */
 .pair-in{max-width:520px;margin:0 auto;padding:min(8vh,56px) 22px 48px;text-align:center}
 .pr-qr{
@@ -1081,7 +1108,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button class="hero alt" id="hNew"><b>New breakdown</b><span>tap the cuts from scratch</span></button>
       <button class="hero alt" id="hScenes"><b>Projects</b><span id="hScenesCount">—</span></button>
       <button class="hero alt" id="hInbox"><b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span></button>
-      <button class="hero alt" id="hSync"><b>Sync<span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span></button>
+      <button class="hero alt" id="hSync"><b><span id="hSyncTitle">Sync</span><span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span></button>
     </div>
     <div class="home-foot"><span id="hStore">stored on this device</span></div>
   </div>
@@ -1199,6 +1226,29 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button class="btn" id="prClose">Done</button>
     </div>
     <p class="pr-warn"><b>Treat this link like a password.</b> Anyone who has it can read and change everything in your Drive file.</p>
+  </div>
+</div>
+
+<div id="auth" class="page">
+  <div class="au-in">
+    <span class="eyebrow">tapline</span>
+    <h1 id="auTitle">Sign in</h1>
+    <p class="au-lede" id="auLede">Sign in on every device you use. Your projects follow, and saving happens on its own.</p>
+    <div class="au-form">
+      <label class="au-f"><span>username</span>
+        <input id="auUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      </label>
+      <label class="au-f"><span>password</span>
+        <input id="auPass" type="password" autocomplete="current-password">
+      </label>
+      <div class="au-err" id="auErr"></div>
+      <button class="btn key" id="auGo">Sign in</button>
+      <button class="btn ghost" id="auSwap">I don't have an account yet</button>
+    </div>
+    <p class="au-foot">
+      No email, no verification — a name and a password you remember.
+      <button id="auLocal">Just work on this device</button>
+    </p>
   </div>
 </div>
 
@@ -1401,9 +1451,13 @@ function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
 $('#logsClose').onclick = () => $('#logs').classList.remove('on');
 $('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
 $('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
-$('#ibPull').onclick = () => { if (!drv.on) { closeInbox(); go('library'); $('#drivePanel').classList.add('on'); return toast('Link your Drive URL first'); } drivePull(); };
-$('#logPull').onclick = () => drivePull();
-$('#logPush').onclick = () => drivePush();
+$('#ibPull').onclick = () => {
+  if (cloud.on) { if (!cloud.user) { closeInbox(); return setupDrive(); } return cloudPull(); }
+  if (!drv.on) { closeInbox(); go('library'); $('#drivePanel').classList.add('on'); return toast('Link your Drive URL first'); }
+  drivePull();
+};
+$('#logPull').onclick = () => cloud.on ? cloudPull() : drivePull();
+$('#logPush').onclick = () => cloud.on ? cloudSave() : drivePush();
 $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
@@ -1686,9 +1740,20 @@ function paintSend() {
   const btn = $('#sdSend');
   btn.disabled = !cuts;
   btn.classList.remove('sent');
-  btn.textContent = drv.on ? 'Send to Drive' : 'Link Drive to send';
   const st = $('#sdState');
   st.className = 'sd-state';
+  if (cloud.on) {
+    /* No handover on this build — the cuts are already on their way, so the
+       button is only there for the reassurance of pressing it. */
+    btn.textContent = cloud.user ? 'Save now' : 'Sign in to save';
+    st.textContent = !cloud.user ? 'saved on this device only'
+      : cloud.err ? cloud.err
+      : dirty ? 'saving…'
+      : cloud.last ? 'saved ' + fmtWhen(cloud.last) : 'saved';
+    if (cloud.user && !cloud.err && !dirty) st.className = 'sd-state ok';
+    return;
+  }
+  btn.textContent = drv.on ? 'Send to Drive' : 'Link Drive to send';
   st.textContent = drv.on
     ? (dirty ? 'not sent yet' : (drv.last ? 'last sent ' + fmtWhen(drv.last) : ''))
     : 'saved on this device';
@@ -1700,17 +1765,21 @@ $('#sdName').addEventListener('input', () => {
 });
 $('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
 $('#sdSend').onclick = async () => {
-  if (!drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
+  if (cloud.on && !cloud.user) return setupDrive();
+  if (!cloud.on && !drv.on) { go('library'); $('#drivePanel').classList.add('on'); $('#dpId').focus(); return; }
   const st = $('#sdState'), btn = $('#sdSend');
-  st.className = 'sd-state'; st.textContent = 'sending…';
+  st.className = 'sd-state'; st.textContent = cloud.on ? 'saving…' : 'sending…';
   btn.disabled = true;
-  const ok = await drivePush();
+  const ok = cloud.on ? await cloudSave({ quiet: true }) : await drivePush();
   btn.disabled = false;
   if (ok) {
-    btn.classList.add('sent'); btn.textContent = 'Sent ✓';
-    st.className = 'sd-state ok'; st.textContent = (P.markers || []).length + ' cuts are on your other devices';
+    btn.classList.add('sent'); btn.textContent = 'Saved ✓';
+    st.className = 'sd-state ok';
+    st.textContent = cloud.on
+      ? (P.markers || []).length + ' cuts are on your account'
+      : (P.markers || []).length + ' cuts are on your other devices';
   } else {
-    st.className = 'sd-state err'; st.textContent = lastErr || 'send failed — see the sync log';
+    st.className = 'sd-state err'; st.textContent = (cloud.on ? cloud.err : lastErr) || 'that did not go through — see the technical log';
   }
 };
 $('#sdAgain').onclick = () => startRetake();
@@ -1872,7 +1941,11 @@ $('#ibClose').onclick = closeInbox;
 $('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
 $('#ibReadAll').onclick = () => { inbox.forEach(m => m.read = true); saveInbox(); paintInbox(); paintInboxBadges(); };
 $('#hInbox').onclick = () => openInbox();
-$('#hSync').onclick = e => { e.stopPropagation(); drv.on ? openSyncPop($('#hSync')) : setupDrive(); };
+$('#hSync').onclick = e => {
+  e.stopPropagation();
+  if (cloud.on) return cloud.user ? openSyncPop($('#hSync')) : setupDrive();
+  drv.on ? openSyncPop($('#hSync')) : setupDrive();
+};
 $('#libInbox').onclick = () => openInbox();
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
@@ -1950,6 +2023,7 @@ function paintHome() {
   }
   const vis = visibleScenes().length;
   $('#hScenesCount').textContent = vis + (vis === 1 ? ' project' : ' projects');
+  if (cloud.on) { paintCloud(); return; }
   const s = syncStatus();
   $('#hSyncSub').textContent = drv.on ? s.txt.toLowerCase() : 'set up to use two devices';
   const sb = $('#hSyncBadge'); if (sb) sb.style.display = (drv.on && (dirty || lastErr)) ? 'inline-block' : 'none';
@@ -2337,11 +2411,60 @@ function mergeScenes(localScenes, incoming, sinceSync) {
 }
 let syncing = false, lastErr = '', dirty = false, driveGone = false;
 
+/* Everything that happens to the library the moment a set of scenes arrives,
+   whoever carried them: merge, refresh the open editor, snapshot, deliver to
+   the inbox. Both backends share it because they differ only in transport —
+   the Drive build asks for scenes when you press Pull, the account build asks
+   as part of saving, and neither should have its own idea of what a merge
+   means. `since` is the last exchange this backend knows about, which is what
+   decides whether a scene that changed in two places is a conflict. */
+function absorbScenes(rawScenes, since) {
+  const incoming = (rawScenes || []).map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+  const before = lib.scenes.length;
+  const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
+  const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
+  const merged = mergeScenes(lib.scenes, incoming, since);
+  lib.scenes = merged.scenes;
+  merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
+
+  /* What arrives can replace the very scene the editor is showing. P is a
+     copy taken at load time, so it is now stale — and the next save() would
+     write it back over the newer data. If nothing has been edited since P
+     was loaded, refresh it silently; if it has, the merge above already
+     forked the remote copy, so keep editing and just say so. */
+  const cur = curScene();
+  if (cur && cur.id === pFrom.id) {
+    /* compare the actual content, not timestamps — a timestamp differs for
+       reasons that have nothing to do with the data, and reloading P on
+       those is invisible churn that only makes the log lie */
+    const fresh = JSON.stringify(cur.data);
+    if (fresh !== JSON.stringify(sceneData())) {
+      const wasCuts = (P.markers || []).length;
+      Object.assign(P, migrate(JSON.parse(fresh)));
+      markPLoaded(cur);
+      slog('info', 'editor refreshed from the copy that arrived for "' + cur.name + '"',
+        wasCuts + ' → ' + (P.markers || []).length + ' cuts');
+      if (screen === 'edit') { recalc(); render(); updatePos(); }
+    } else markPLoaded(cur);     /* identical — just realign the version */
+  }
+  store.set(LIBKEY, lib);
+  maybeSnapshot();
+
+  /* the whole point of the trip: say what turned up, in the inbox, rather
+     than leaving the user to infer it from counts in a log */
+  const got = deliver(merged.arrivals);
+  paintSceneName();
+  if (screen === 'library') renderScenesIfIdle();
+  if (screen === 'home') paintHome();
+  return { incoming: incoming.length, before, gained, newer, got };
+}
+
 /* Sync only ever runs because you asked for it. Nothing here fires on a
    timer, on focus, or on a save — an automatic round trip that fails quietly
    is exactly what made this impossible to diagnose, so every transfer is now
    an explicit act with a logged result. `dirty` just tracks whether local
-   work has moved on since the last successful push. */
+   work has moved on since the last successful push. (The account build below
+   overrides that bargain deliberately: there, saving is the product.) */
 async function driveXfer(dir) {
   if (!drv.url) { slog('err', 'no drive url set'); toast('Link a Drive URL first'); return false; }
   if (syncing) { slog('info', 'ignored — a transfer is already running'); return false; }
@@ -2392,49 +2515,15 @@ async function driveXfer(dir) {
     }
     if (!payload || !Array.isArray(payload.scenes)) { slog('err', 'reply had no scenes array', txt.slice(0, 160)); throw new Error('unexpected reply'); }
 
-    const incoming = payload.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
-    const before = lib.scenes.length;
-    const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
-    const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
-    const merged = mergeScenes(lib.scenes, incoming, drv.last);
-    lib.scenes = merged.scenes;
+    const res = absorbScenes(payload.scenes, drv.last);
     slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
-      'drive had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
-    merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
+      'drive had ' + res.incoming + ' · ' + res.gained + ' new · ' + res.newer + ' newer · now ' + lib.scenes.length + ' (was ' + res.before + ')');
 
     lastErr = ''; driveGone = false; drv.last = Date.now(); saveDrv();
     if (push) dirty = false;
+    paintDrive();
 
-    /* A pull can replace the very scene the editor is showing. P is a copy
-       taken at load time, so it is now stale — and the next save() would
-       write it back over the newer data. If nothing has been edited since P
-       was loaded, refresh it silently; if it has, the merge above already
-       forked the remote copy, so keep editing and just say so. */
-    const cur = curScene();
-    if (cur && cur.id === pFrom.id) {
-      /* compare the actual content, not timestamps — a timestamp differs for
-         reasons that have nothing to do with the data, and reloading P on
-         those is invisible churn that only makes the log lie */
-      const fresh = JSON.stringify(cur.data);
-      if (fresh !== JSON.stringify(sceneData())) {
-        const wasCuts = (P.markers || []).length;
-        Object.assign(P, migrate(JSON.parse(fresh)));
-        markPLoaded(cur);
-        slog('info', 'editor refreshed from the pulled copy of "' + cur.name + '"',
-          wasCuts + ' → ' + (P.markers || []).length + ' cuts');
-        if (screen === 'edit') { recalc(); render(); updatePos(); }
-      } else markPLoaded(cur);     /* identical — just realign the version */
-    }
-    store.set(LIBKEY, lib);
-    maybeSnapshot();
-
-    /* the whole point of the trip: say what turned up, in the inbox, rather
-       than leaving the user to infer it from counts in a log */
-    const got = deliver(merged.arrivals);
-    paintSceneName(); paintDrive();
-    if (screen === 'library') renderScenesIfIdle();
-    if (screen === 'home') paintHome();
-    if (got) { openInbox(); toast(got === 1 ? '1 new arrival' : got + ' new arrivals'); }
+    if (res.got) { openInbox(); toast(res.got === 1 ? '1 new arrival' : res.got + ' new arrivals'); }
     else toast(push ? 'pushed — drive is up to date' : 'nothing new — you already have it all');
     return true;
   } catch (e) {
@@ -2459,12 +2548,18 @@ const drivePull = () => driveXfer('pull');
 const drivePush = () => driveXfer('push');
 /* every edit used to schedule a background push; now it only records that
    there is something worth pushing, which the UI surfaces */
-const syncSoon = () => { if (drv.on) { dirty = true; paintDrive(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); } };
+const syncSoon = () => {
+  if (cloud.on) return cloudSoon();
+  if (drv.on) { dirty = true; paintDrive(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); }
+};
 
 addEventListener('pagehide', flushSave);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 function saveDrv() { store.set(DKEY, { url: drv.url, on: drv.on }); }
 function paintDrive(err) {
+  /* On the account build there is no Drive, no pairing and no push — the
+     same widgets say whether your work is saved instead. */
+  if (cloud.on) return paintCloud();
   const sb = $('#syncBtn'), sl = $('#syncLbl');
   const e = err || lastErr;
   if (sb) {
@@ -2494,6 +2589,7 @@ $('#driveBtn').onclick = () => $('#drivePanel').classList.toggle('on');
 /* The sync popover — the whole point is that you never have to leave what
    you are doing, or read a log, to send work or find out whether it went. */
 function syncStatus() {
+  if (cloud.on) return cloudStatus();
   if (!drv.on) return { cls: '', txt: 'Not connected', sub: 'Set up Drive to use two devices' };
   if (syncing) return { cls: 'busy', txt: 'Working…', sub: '' };
   if (driveGone) return { cls: 'err', txt: 'Connection is gone', sub: 'Re-deploy in Apps Script, then Reconnect below' };
@@ -2506,6 +2602,13 @@ function paintSyncPop() {
   $('#spState').className = 'sp-state ' + s.cls;
   $('#spTxt').textContent = s.txt;
   $('#spSub').textContent = s.sub;
+  if (cloud.on) {
+    $('#spPull').disabled = $('#spPush').disabled = cloud.busy;
+    $('#spPush').textContent = !cloud.user ? 'Sign in' : cloud.err ? 'Try saving again' : 'Save now';
+    $('#spPull').textContent = 'Get the latest';
+    $('#spPair').textContent = cloud.user ? 'Sign out' : 'Sign in';
+    return;
+  }
   $('#spPull').disabled = $('#spPush').disabled = syncing;
   $('#spPush').textContent = !drv.on ? 'Set up Drive' : driveGone ? 'Reconnect' : 'Send my work';
 }
@@ -2526,12 +2629,25 @@ $('#syncBtn').onclick = e => {
   e.stopPropagation();
   $('#syncPop').classList.contains('on') ? closeSyncPop() : openSyncPop($('#syncBtn'));
 };
-$('#spPull').onclick = async () => { if (!drv.on) return setupDrive(); await drivePull(); paintSyncPop(); };
-$('#spPush').onclick = async () => { if (!drv.on || driveGone) return setupDrive(); await drivePush(); paintSyncPop(); };
-$('#spPair').onclick = () => { closeSyncPop(); drv.on ? openPair() : setupDrive(); };
+$('#spPull').onclick = async () => {
+  if (cloud.on) { if (!cloud.user) return setupDrive(); await cloudPull(); return paintSyncPop(); }
+  if (!drv.on) return setupDrive();
+  await drivePull(); paintSyncPop();
+};
+$('#spPush').onclick = async () => {
+  if (cloud.on) { if (!cloud.user) return setupDrive(); await cloudSave(); return paintSyncPop(); }
+  if (!drv.on || driveGone) return setupDrive();
+  await drivePush(); paintSyncPop();
+};
+$('#spPair').onclick = () => {
+  if (cloud.on) return cloud.user ? cloudSignOut() : setupDrive();
+  closeSyncPop(); drv.on ? openPair() : setupDrive();
+};
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
 function setupDrive() {
-  closeSyncPop(); go('library');
+  closeSyncPop();
+  if (cloud.on) { cloud.local = false; paintAuthMode(); openAuth(); const u = $('#auUser'); if (u) u.focus(); return; }
+  go('library');
   $('#drivePanel').classList.add('on');
   const f = $('#dpId'); if (f) f.focus();
 }
@@ -2547,6 +2663,332 @@ function flashSaved() {
 }
 $('#dpId').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dpConnect').click(); });
 $('#dpHow').onclick = () => $('#dpSetup').classList.toggle('on');
+
+/* ═══ accounts — the deploy that has a backend ═════════════════════════
+   Same app, different front door. The static copy asks you for a Drive URL
+   and carries it to the second device by QR, then makes you press Push and
+   Pull; the copy that answers on /api asks for a username and a password,
+   and after that saving is just saving. Everything here stays inert unless
+   the probe at boot finds that backend, so the static build is untouched. */
+const CKEY = 'tapline.account', CLOUDHINT = 'tapline.cloud';
+let cloud = {
+  on: false,        /* this deploy has the accounts backend */
+  user: '',         /* who is signed in */
+  rev: 0,           /* the server revision this library is built on */
+  last: 0,          /* last successful exchange, the merge cut-off */
+  lastPull: 0,
+  busy: false,
+  err: '',
+  local: false      /* chose to carry on without an account */
+};
+let cloudTimer = 0, cloudGen = 0, cloudMode = 'in';   /* the auth card: sign in or join */
+
+/* Remembered so a return visit shows the right front door immediately
+   instead of flashing the wrong one for a round trip. */
+const cloudHint = () => { try { return localStorage.getItem(CLOUDHINT) === '1'; } catch (e) { return false; } };
+const setCloudHint = v => { try { localStorage.setItem(CLOUDHINT, v ? '1' : '0'); } catch (e) {} };
+const saveCloud = () => store.set(CKEY, { user: cloud.user, rev: cloud.rev, last: cloud.last });
+
+async function api(path, opts) {
+  const o = Object.assign({ credentials: 'same-origin', headers: { 'content-type': 'application/json' } }, opts || {});
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const killer = ac ? setTimeout(() => ac.abort(), 25000) : 0;
+  try {
+    const r = await fetch('/api' + path, ac ? Object.assign(o, { signal: ac.signal }) : o);
+    let data = null;
+    try { data = JSON.parse(await r.text()); } catch (e) {}
+    return { ok: r.ok, status: r.status, data: data || {} };
+  } finally { clearTimeout(killer); }
+}
+
+/* ── the login screen ───────────────────────────────── */
+function openAuth() { $('#auth').classList.add('on'); }
+function closeAuth() { $('#auth').classList.remove('on'); $('#auErr').textContent = ''; }
+function authMsg(msg, bad) {
+  const e = $('#auErr');
+  e.textContent = msg || '';
+  e.classList.toggle('bad', !!bad);
+}
+function paintAuthMode() {
+  const join = cloudMode === 'up';
+  $('#auTitle').textContent = join ? 'Make an account' : 'Sign in';
+  $('#auLede').textContent = join
+    ? 'Pick a name and a password. Use the same two on your phone and your laptop and they share one set of projects.'
+    : 'Sign in on every device you use. Your projects follow, and saving happens on its own.';
+  $('#auGo').textContent = join ? 'Create account' : 'Sign in';
+  $('#auSwap').textContent = join ? 'I already have an account' : "I don't have an account yet";
+  $('#auPass').setAttribute('autocomplete', join ? 'new-password' : 'current-password');
+  authMsg('');
+}
+$('#auSwap').onclick = () => { cloudMode = cloudMode === 'up' ? 'in' : 'up'; paintAuthMode(); $('#auUser').focus(); };
+$('#auGo').onclick = () => cloudAuth();
+$('#auLocal').onclick = () => {
+  cloud.local = true; closeAuth();
+  slog('info', 'carrying on without an account', 'this device only — nothing is saved to the server');
+  toast('working on this device only');
+  paintCloud();
+};
+['#auUser', '#auPass'].forEach(sel => $(sel).addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') cloudAuth();
+}));
+
+async function cloudAuth() {
+  const user = $('#auUser').value.trim().toLowerCase(), pass = $('#auPass').value;
+  if (!user || !pass) return authMsg('Fill in both, then try again.', true);
+  $('#auGo').disabled = true;
+  authMsg(cloudMode === 'up' ? 'creating…' : 'signing in…');
+  try {
+    const creds = JSON.stringify({ username: user, password: pass });
+    let r = await api(cloudMode === 'up' ? '/signup' : '/login', { method: 'POST', body: creds });
+
+    /* A second device is a fresh install, so it opens on "Make an account" —
+       and typing the name and password you already have is what people
+       actually do there. Answering "that username is taken" and leaving them
+       to hunt for the swap link is a dead end, so try it as a sign-in. */
+    if (r.status === 409) {
+      cloudMode = 'in'; paintAuthMode();
+      const asSignIn = await api('/login', { method: 'POST', body: creds });
+      if (asSignIn.ok) { slog('info', 'that account already existed — signed in instead'); r = asSignIn; }
+      else {
+        slog('err', 'could not create that account', 'name taken, password does not match it');
+        return authMsg('That name is taken — and that password does not match it.', true);
+      }
+    }
+
+    if (!r.ok) {
+      slog('err', cloudMode === 'up' ? 'could not create that account' : 'sign-in refused', r.data.error || ('http ' + r.status));
+      return authMsg(r.data.error || 'That did not work. Try again.', true);
+    }
+    cloud.user = r.data.user; cloud.local = false; cloud.err = '';
+    /* A different account on this device must not inherit the revision the
+       previous one was built on — that would look like a conflict forever. */
+    const prev = (await store.get(CKEY)) || {};
+    if (prev.user === cloud.user) { cloud.rev = prev.rev || 0; cloud.last = prev.last || 0; }
+    else { cloud.rev = 0; cloud.last = 0; }
+    saveCloud();
+    $('#auPass').value = '';
+    closeAuth();
+    slog('ok', 'signed in as ' + cloud.user);
+    paintCloud();
+    await cloudPull(true);
+    /* Anything made before signing in is real work — hand it over, don't
+       strand it on the device. */
+    if (lib.scenes.some(s => !s.deleted)) await cloudSave({ quiet: true });
+  } catch (e) {
+    slog('err', 'sign-in never completed', String(e.message || e));
+    authMsg(navigator.onLine ? 'Could not reach the server. Try again.' : 'You are offline.', true);
+  } finally {
+    $('#auGo').disabled = false;
+  }
+}
+
+function cloudSignedOut(why) {
+  cloud.user = ''; cloud.rev = 0; cloud.busy = false;
+  saveCloud(); paintCloud();
+  cloudMode = 'in'; paintAuthMode(); openAuth();
+  if (why) authMsg(why, true);
+  return false;
+}
+
+async function cloudSignOut() {
+  closeSyncPop();
+  try { await api('/logout', { method: 'POST' }); } catch (e) {}
+  slog('info', 'signed out', 'projects stay on this device');
+  cloudSignedOut('');
+}
+
+/* ── the exchange ───────────────────────────────────── */
+async function cloudPull(quiet) {
+  if (!cloud.on || !cloud.user || cloud.busy) return false;
+  cloud.busy = true; paintCloud();
+  const t0 = Date.now();
+  try {
+    slog('net', 'GET → your account');
+    const r = await api('/state');
+    if (r.status === 401) return cloudSignedOut('Your session ran out. Sign in again.');
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    const res = absorbScenes(r.data.scenes, cloud.last);
+    cloud.rev = r.data.rev || 0;
+    cloud.last = Date.now(); cloud.lastPull = Date.now(); cloud.err = '';
+    saveCloud();
+    slog('ok', 'got your work in ' + (Date.now() - t0) + 'ms',
+      'server had ' + res.incoming + ' · ' + res.gained + ' new · ' + res.newer + ' newer · now ' + lib.scenes.length + ' (was ' + res.before + ')');
+    if (res.got) { openInbox(); toast(res.got === 1 ? '1 new arrival' : res.got + ' new arrivals'); }
+    else if (!quiet) toast('up to date');
+    return true;
+  } catch (e) {
+    cloud.err = cloudWhy(e);
+    slog('err', 'could not get your work', cloud.err);
+    if (!quiet) toast(cloud.err);
+    return false;
+  } finally {
+    cloud.busy = false; paintCloud();
+  }
+}
+
+/* The save. A 409 means the other device wrote while this one was editing —
+   which is the normal case, not an error — so merge what came back and go
+   again. Once: if the second attempt also collides, the next edit will save
+   anyway and nothing has been lost either way. */
+async function cloudSave(opts) {
+  opts = opts || {};
+  if (!cloud.on || !cloud.user) return false;
+  if (cloud.busy) { dirty = true; return false; }
+  clearTimeout(cloudTimer); cloudTimer = 0;
+  cloud.busy = true; paintCloud();
+  const t0 = Date.now();
+  try {
+    commitP(curScene(), false);   /* fold the editor in, without restamping */
+    for (let attempt = 0; attempt < 2; attempt++) {
+      /* An edit made while this request is in flight must not be cleared by
+         its reply — the reply only speaks for the work that went with it. */
+      const gen = cloudGen;
+      const body = JSON.stringify({ scenes: lib.scenes, rev: cloud.rev });
+      slog('net', 'POST → your account', lib.scenes.length + ' projects, ' + body.length + ' bytes');
+      const r = await api('/state', { method: 'POST', body });
+
+      if (r.status === 401) return cloudSignedOut('Your session ran out. Sign in again.');
+      if (r.status === 409) {
+        slog('info', 'the other device had saved first', 'merging its copy in, then saving again');
+        absorbScenes(r.data.scenes, cloud.last);
+        cloud.rev = r.data.rev || 0;
+        cloud.last = Date.now();
+        commitP(curScene(), false);
+        continue;
+      }
+      if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+
+      cloud.rev = r.data.rev || cloud.rev;
+      cloud.last = Date.now(); cloud.err = '';
+      if (gen === cloudGen) dirty = false;
+      saveCloud();
+      slog('ok', 'saved in ' + (Date.now() - t0) + 'ms', 'revision ' + cloud.rev);
+      if (!opts.quiet) flashSaved();
+      return true;
+    }
+    throw new Error('another device kept saving at the same moment');
+  } catch (e) {
+    cloud.err = cloudWhy(e);
+    slog('err', 'save did not go through', cloud.err);
+    if (!opts.quiet) toast('not saved · ' + cloud.err);
+    return false;
+  } finally {
+    cloud.busy = false;
+    /* whatever happened, work that is still unsaved gets another go rather
+       than waiting for the user to happen to type something */
+    if (dirty && !cloudTimer && cloud.user) cloudTimer = setTimeout(() => cloudSave({ quiet: true }), cloud.err ? 15000 : 1400);
+    paintCloud();
+  }
+}
+
+/* fetch() rejects with the same bare message for offline, CORS and a dead
+   function alike, so say which one it actually was. */
+function cloudWhy(e) {
+  const m = String((e && e.message) || e);
+  if (/abort/i.test(m)) return 'the server took too long';
+  if (/failed to fetch|networkerror|load failed/i.test(m)) return navigator.onLine ? 'could not reach the server' : 'you are offline';
+  return m;
+}
+
+/* Every edit already writes to this device. This is the difference: it also
+   queues the trip to the server, so there is no button to remember. */
+function cloudSoon() {
+  if (!cloud.on || !cloud.user) return;
+  dirty = true; cloudGen++;
+  paintCloud();
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => cloudSave({ quiet: true }), 1400);
+}
+
+/* A tab being closed mid-edit is the one moment a debounce cannot survive,
+   and it is exactly when people close the lid. */
+function cloudBeacon() {
+  if (!cloud.on || !cloud.user || !dirty || !navigator.sendBeacon) return;
+  try {
+    commitP(curScene(), false);
+    const blob = new Blob([JSON.stringify({ scenes: lib.scenes, rev: cloud.rev })], { type: 'application/json' });
+    if (navigator.sendBeacon('/api/state', blob)) slog('info', 'sent a last save on the way out');
+  } catch (e) {}
+}
+addEventListener('pagehide', cloudBeacon);
+
+/* Coming back to a tab is the moment the other device's work matters, and
+   it is a real gesture rather than a timer. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { cloudBeacon(); return; }
+  if (!cloud.on || !cloud.user || cloud.busy) return;
+  if (dirty) { cloudSave({ quiet: true }); return; }
+  if (Date.now() - cloud.lastPull > 30000) cloudPull(true);
+});
+
+/* ── what it looks like ─────────────────────────────── */
+function cloudStatus() {
+  if (cloud.local) return { cls: '', txt: 'This device only', sub: 'sign in to save your work', lbl: 'local only' };
+  if (!cloud.user) return { cls: '', txt: 'Not signed in', sub: 'sign in and saving takes care of itself', lbl: 'sign in' };
+  if (cloud.busy) return { cls: 'busy', txt: 'Saving…', sub: 'signed in as ' + cloud.user, lbl: 'saving' };
+  if (cloud.err) return { cls: 'err', txt: "Couldn't save", sub: cloud.err, lbl: 'not saved' };
+  if (dirty) return { cls: 'pending', txt: 'Saving in a moment', sub: 'signed in as ' + cloud.user, lbl: 'saving' };
+  return { cls: 'ok', txt: 'Saved', sub: cloud.last ? 'saved ' + fmtWhen(cloud.last) : 'signed in as ' + cloud.user, lbl: 'saved' };
+}
+function paintCloud() {
+  const s = cloudStatus();
+  const sb = $('#syncBtn'), sl = $('#syncLbl');
+  if (sb) {
+    sb.classList.toggle('on', s.cls === 'ok');
+    sb.classList.toggle('busy', s.cls === 'busy');
+    sb.classList.toggle('err', s.cls === 'err');
+    sb.classList.toggle('pending', s.cls === 'pending');
+    sb.title = cloud.user ? 'Saved to your account' : 'Sign in to save';
+    if (sl) sl.textContent = s.lbl;
+  }
+  const hss = $('#hSyncSub'); if (hss) hss.textContent = s.sub || s.txt.toLowerCase();
+  const hsb = $('#hSyncBadge'); if (hsb) hsb.style.display = (cloud.user && cloud.err) ? 'inline-block' : 'none';
+  const hs = $('#hStore');
+  if (hs) hs.textContent = cloud.user ? 'saved to your account as ' + cloud.user
+    : cloud.local ? 'stored on this device' : 'sign in to save your work';
+  if ($('#syncPop').classList.contains('on')) paintSyncPop();
+  paintInboxBadges();
+}
+
+async function cloudBoot() {
+  let on = false;
+  try { const r = await api('/health'); on = !!(r.ok && r.data.cloud); } catch (e) { on = false; }
+  setCloudHint(on);
+  cloud.on = on;
+  if (!on) {
+    document.body.classList.remove('cloud');
+    closeAuth();
+    paintDrive();
+    slog('info', 'ready', drv.on ? 'drive linked · pull/push is manual' : 'drive not linked · local only');
+    return;
+  }
+  document.body.classList.add('cloud');
+  /* nothing here is called push, pull or sync any more — it is your account
+     and whether your work is on it */
+  $('#logPull').textContent = 'Get the latest';
+  $('#logPush').textContent = 'Save now';
+  $('#hSyncTitle').textContent = 'Your account';
+  $('#hInboxSub').textContent = 'what came in from your other device';
+  const saved = (await store.get(CKEY)) || {};
+  let me = { ok: false, data: {} };
+  try { me = await api('/me'); } catch (e) {}
+  if (me.ok && me.data.user) {
+    cloud.user = me.data.user;
+    if (saved.user === cloud.user) { cloud.rev = saved.rev || 0; cloud.last = saved.last || 0; }
+    closeAuth();
+    slog('info', 'ready', 'signed in as ' + cloud.user + ' · saving happens on its own');
+    paintCloud();
+    await cloudPull(true);
+  } else {
+    slog('info', 'ready', 'not signed in · projects are on this device until you do');
+    cloudMode = saved.user ? 'in' : 'up';
+    if (saved.user) $('#auUser').value = saved.user;
+    paintAuthMode();
+    paintCloud();
+    openAuth();
+  }
+}
 $('#dpCopyCode').onclick = () => navigator.clipboard.writeText(scriptKind === 'sheet' ? APPS_SCRIPT_SHEET : APPS_SCRIPT)
   .then(() => toast('code copied'), () => toast('copy blocked by the browser'));
 $('#dpConnect').onclick = async () => {
@@ -4009,6 +4451,9 @@ $('#nbTab').addEventListener('click', () => armStep(1));
 
 /* ═══ keys ════════════════════════════════════════════ */
 addEventListener('keydown', e => {
+  /* the login gate is not something a stray keystroke should get you past,
+     or navigate around behind */
+  if ($('#auth').classList.contains('on')) return;
   const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
   if (e.key === 'Escape') {
     if ($('#pair').classList.contains('on')) { $('#pair').classList.remove('on'); return; }
@@ -4210,9 +4655,17 @@ addEventListener('resize', syncTopbar);
 
   hist = (await store.get(HISTKEY)) || {};
 
+  /* Which build is this? The deploy with an accounts backend answers /api;
+     the static copy does not and keeps the Drive flow exactly as it was. The
+     last answer is remembered so a return visit puts the right front door up
+     immediately rather than flashing the wrong one for a round trip. */
+  const expectCloud = cloudHint();
+  if (expectCloud) { document.body.classList.add('cloud'); paintAuthMode(); openAuth(); }
+
   const cfg = await store.get(DKEY);
   if (cfg) { drv.url = cfg.url || ''; drv.on = !!cfg.on && !!cfg.url; $('#dpId').value = drv.url; }
-  const paired = consumePairHash();
+  /* a pairing link is a Drive credential; it means nothing to the account build */
+  const paired = expectCloud ? false : consumePairHash();
   $('#dpId').value = drv.url;
   paintKind();
   paintDrive();
@@ -4225,7 +4678,9 @@ addEventListener('resize', syncTopbar);
   tidyBlank();
   if (screen === 'home') paintHome();
   paintInboxBadges();
-  slog('info', 'ready', drv.on ? 'drive linked · pull/push is manual' : 'drive not linked · local only');
+  /* the one network call at boot, and only to find out which build this is —
+     cloudBoot logs "ready" for whichever answer comes back */
+  cloudBoot();
 })();
 </script>
 </body>

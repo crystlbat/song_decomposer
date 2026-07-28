@@ -4,7 +4,14 @@ Play a song once. Tap where it turns. Build the breakdown as you listen — no D
 
 **Live app → https://crystlbat.github.io/song_decomposer/**
 
-It is one self-contained `index.html`. No build, no server, no account. Everything is stored on the device, and Drive sync is optional.
+It is one self-contained `index.html`. Everything is stored on the device, and it comes in two flavours depending on where you put it:
+
+| Where it runs | How your work travels |
+|---|---|
+| **Any static host** (GitHub Pages, a file on disk) | Optional Drive sync: paste a URL once, pair the phone by QR, then **Push** and **Pull** |
+| **Netlify** (this repo's `netlify.toml`) | A username and a password. Sign in on each device and **saving just happens** — no URL, no QR, no push or pull |
+
+Same file, either way. It works out which one it is at startup and shows the matching front door.
 
 ---
 
@@ -16,11 +23,11 @@ Most tools make you scrub a waveform to find section boundaries. Tapline inverts
 
 | Device | What you do |
 |---|---|
-| **Phone / small device** | Tap the cuts while the song plays, hit **Send** |
-| **Laptop / tablet** | **Pull**, open the breakdown, type notes against each section |
-| **Back to the phone** | **Pull**, listen again, add more cuts |
+| **Phone / small device** | Tap the cuts while the song plays |
+| **Laptop / tablet** | Open the breakdown, type notes against each section |
+| **Back to the phone** | Listen again, add more cuts |
 
-The same scene travels between them. Audio does not — load the same track on each device and the timeline lines up.
+The same scene travels between them. On the account build that happens by itself; on the static build you press **Send** and **Pull**. Audio never travels either way — load the same track on each device and the timeline lines up.
 
 ---
 
@@ -39,7 +46,27 @@ Hit **Live notes** and the song plays while you type. Each note lands in the sec
 
 ---
 
-## Drive sync (optional)
+## Accounts (the Netlify deploy)
+
+Deploy this repo to Netlify and the app grows a login. There is nothing to configure: `netlify.toml` points at one function, `netlify/functions/api.mjs`, and it stores everything in Netlify Blobs.
+
+1. **Pick a username and a password.** No email, no verification, no confirmation link.
+2. **Sign in with the same two on every device.** That is the whole pairing story — no URL to copy, no QR to scan.
+3. **Then stop thinking about it.** Every edit saves itself a moment later, on closing the tab, and when you come back to it. The toolbar says `saved`, `saving` or `not saved`, and there is a **Save now** button for the reassurance of pressing something.
+
+Coming back to a tab fetches whatever the other device did while you were away. If both devices changed the same project, nothing is thrown away — your copy stays put and theirs lands beside it as `<name> (received)`, exactly as it does on the Drive build.
+
+Signing in is not compulsory: **Just work on this device** carries on with everything local, and the ⋯ → Sync tile signs you in later. Signing out leaves your projects on the device.
+
+Two knobs, both optional:
+
+- `TAPLINE_SECRET` — pins the session-signing key. Unset, one is generated on first use and kept in the blob store. Changing it signs everyone out.
+- Passwords are stored as PBKDF2-SHA256 (210k iterations, per-user salt), sessions are HMAC-signed cookies that are `HttpOnly`, `Secure` and `SameSite=Lax`, and repeated wrong guesses at one username are throttled.
+
+> [!NOTE]
+> This is a small personal backend, not a hardened service: no email means no password reset, so lose the password and that account's work stays only on the devices already signed in.
+
+## Drive sync (the static build)
 
 Sync is **manual by design** — nothing transfers on a timer or in the background. You **Pull** when you want the other device's work and **Push** when you want to hand yours over. The toolbar shows `unpushed` when local work hasn't gone up.
 
@@ -81,7 +108,7 @@ Opening an item shows before → after counts for cuts, tracks and notes. Nothin
 
 ## Your data
 
-- Saved locally the moment you change anything, and flushed immediately when the tab is hidden or closed.
+- Saved locally the moment you change anything, and flushed immediately when the tab is hidden or closed. On the account build the same edit goes to the server a beat later.
 - **Rolling local backups** — the last 8 snapshots, independent of Drive. Recover with **⋯ → Restore backup**. A wipe can't push good snapshots out of the buffer.
 - **Export / import** — any scene to a `.tapline.json` file, or copy-paste it as text.
 - **Export .csv** — one row per note, for a spreadsheet.
@@ -106,3 +133,5 @@ Opening an item shows before → after counts for cuts, tracks and notes. Nothin
 ## Running it yourself
 
 Open `index.html` in a browser. That's the whole thing — no dependencies, no build step. To host it, serve that one file from anywhere static (this copy runs on GitHub Pages).
+
+For the account build, run `netlify dev` from the repo root, or push the repo to Netlify and let it deploy: `netlify.toml` and `netlify/functions/api.mjs` are the only extra pieces, and they are ignored entirely by every other host.
