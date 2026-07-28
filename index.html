@@ -875,6 +875,43 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #savedTag.on{opacity:1}
 @media (max-width:900px){#savedTag{display:none}}
 
+/* ── choosing what to record, on a device with no editor ─
+   A phone only ever taps cuts, so the one thing it could not do was put
+   those cuts into a song it already has. */
+.pick-in{max-width:520px;margin:0 auto;padding:min(9vh,64px) 20px 48px}
+.pk-big{
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;text-align:left;
+  padding:20px;border-radius:14px;margin-top:6px;
+  border:1px solid rgba(217,143,196,.32);background:linear-gradient(135deg,rgba(217,143,196,.12),rgba(255,255,255,.02) 60%);
+  transition:.2s;
+}
+.pk-big:hover{border-color:var(--play);transform:translateY(-2px)}
+.pk-big b{font-family:var(--txt);font-size:19px;font-weight:600;letter-spacing:-.02em}
+.pk-big span{font-family:var(--ui);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.pk-or{display:flex;align-items:center;gap:11px;margin:22px 0 12px}
+.pk-or i{flex:1;height:1px;background:var(--line)}
+.pk-or span{font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.pk-item{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;
+  border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);
+  margin-bottom:8px;transition:.16s;
+}
+.pk-item:hover{border-color:var(--cut);background:rgba(143,166,255,.07)}
+.pk-item .pk-main{flex:1;min-width:0}
+.pk-item b{display:block;font-family:var(--txt);font-size:15px;font-weight:600;letter-spacing:-.015em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-item span{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.pk-item .pk-add{
+  flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line2);color:var(--dim);font-size:15px;
+}
+.pk-item:hover .pk-add{border-color:var(--cut);color:var(--cut)}
+.pk-none{font-family:var(--ui);font-size:12px;color:var(--faint);padding:6px 2px 2px}
+.pk-note{margin:18px 0 22px;font-size:12.5px;line-height:1.6;color:var(--faint)}
+/* which project the cuts are joining, on the hand-over screen */
+.sd-into{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--cut);margin-bottom:10px;display:none}
+body.into-tl .sd-into{display:block}
+
 /* ── the youtube dock: the song, without loading a file ─ */
 #ytDock{
   position:fixed;right:14px;bottom:14px;z-index:17;width:min(356px,64vw);display:none;
@@ -1007,6 +1044,10 @@ body.screen-send #top{display:flex}
 .ib-msg.unread .ib-dot{background:var(--cut);box-shadow:0 0 10px var(--cut)}
 .ib-main{flex:1;min-width:0}
 .ib-name{font-family:var(--txt);font-size:16px;font-weight:600;letter-spacing:-.012em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ib-times{
+  font-family:var(--mono);font-size:9px;color:var(--faint);border:1px solid var(--line);
+  border-radius:5px;padding:2px 5px;letter-spacing:0;
+}
 .ib-meta{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px}
 .ib-tag{
   font-family:var(--ui);font-size:8.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
@@ -1497,6 +1538,20 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 </div>
 
+<div id="pick" class="page">
+  <div class="pick-in">
+    <span class="eyebrow">01 — what are you recording?</span>
+    <button class="pk-big" id="pkNew">
+      <b>A new project</b>
+      <span>a song you have not marked up yet</span>
+    </button>
+    <div class="pk-or"><i></i><span>or add a timeline to</span><i></i></div>
+    <div id="pkList"></div>
+    <p class="pk-note">A second timeline sits beside the first — song sections in one, drum breaks in another — on the same song.</p>
+    <button class="btn ghost" id="pkBack">← home</button>
+  </div>
+</div>
+
 <div id="send" class="page">
   <div class="send-in">
     <span class="eyebrow">02 — hand it over</span>
@@ -1505,6 +1560,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <div class="sd-lbl">cuts captured</div>
       <div class="sd-len" id="sdLen">—</div>
     </div>
+    <div class="sd-into" id="sdInto">—</div>
     <input id="sdName" class="sd-name" placeholder="name this one…" autocomplete="off">
     <div class="sd-acts">
       <button class="sd-btn go" id="sdSend">Send</button>
@@ -1981,7 +2037,13 @@ function paintSend() {
   $('#sdCount').textContent = cuts;
   $('#sdLen').textContent = cuts ? 'about ' + fmt(P.duration) + ' long' : 'nothing captured yet';
   const sc = curScene();
-  $('#sdName').value = sc ? sc.name : '';
+  const tl = recKind === 'timeline' && recTL;
+  document.body.classList.toggle('into-tl', !!tl);
+  $('#sdName').value = tl ? recTL.name : (sc ? sc.name : '');
+  $('#sdName').placeholder = tl ? 'name this timeline…' : 'name this one…';
+  $('#sdInto').textContent = tl && sc ? 'going into ' + sc.name : '';
+  const eb = $('#send .eyebrow');
+  if (eb) eb.textContent = tl ? '02 — name this timeline' : '02 — hand it over';
   const btn = $('#sdSend');
   btn.disabled = !cuts;
   btn.classList.remove('sent');
@@ -2006,7 +2068,16 @@ function paintSend() {
 $('#sdName').addEventListener('input', () => {
   const sc = curScene(); if (!sc) return;
   const v = $('#sdName').value.trim();
-  if (v && v !== sc.name) { sc.name = v; sc.updated = Date.now(); store.set(LIBKEY, lib); paintSceneName(); syncSoon(); }
+  if (!v) return;
+  /* after a second pass the box is naming the timeline that just went in —
+     renaming the whole project there would be the wrong thing entirely */
+  if (recKind === 'timeline' && recTL) {
+    if (v === recTL.name) return;
+    recTL.name = v; sc.updated = Date.now();
+    commitP(sc, false); store.set(LIBKEY, lib); syncSoon();
+    return;
+  }
+  if (v !== sc.name) { sc.name = v; sc.updated = Date.now(); store.set(LIBKEY, lib); paintSceneName(); syncSoon(); }
 });
 $('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
 $('#sdSend').onclick = async () => {
@@ -2056,9 +2127,48 @@ try { const raw = localStorage.getItem(INBOXKEY); if (raw) inbox = JSON.parse(ra
 const saveInbox = () => { try { localStorage.setItem(INBOXKEY, JSON.stringify(inbox)); } catch (e) {} };
 const unreadCount = () => inbox.filter(m => !m.read).length;
 
+/* One row per project. Syncing the same project after three edits used to
+   leave three rows all saying the same thing, and the one arrival that
+   actually needed a decision was buried under them. A repeat arrival now
+   updates the row that is already there rather than stacking on top of it.
+
+   Conflicts are the exception: each fork is a separate copy sitting beside
+   your own, so each keeps its own row until you deal with it. */
+const KIND_RANK = { updated: 0, new: 1, both: 2 };
+const inboxKey = a => a.kind === 'both' ? 'fork:' + a.forkId : 'scene:' + a.sceneId;
+
+/* a project deleted since it arrived has nothing left to open */
+function pruneInbox() {
+  const before = inbox.length;
+  inbox = inbox.filter(x => x.kind === 'both'
+    ? lib.scenes.some(s => s.id === x.forkId && !s.deleted)
+    : lib.scenes.some(s => s.id === x.sceneId && !s.deleted));
+  return before - inbox.length;
+}
+
 function deliver(arrivals) {
   if (!arrivals || !arrivals.length) return 0;
-  arrivals.forEach(a => inbox.unshift(Object.assign({ id: uid(), ts: Date.now(), read: false }, a)));
+  arrivals.forEach(a => {
+    const key = inboxKey(a);
+    const i = inbox.findIndex(x => inboxKey(x) === key);
+    if (i < 0) {
+      inbox.unshift(Object.assign({ id: uid(), ts: Date.now(), read: false, times: 1 }, a));
+      return;
+    }
+    const prev = inbox.splice(i, 1)[0];
+    inbox.unshift(Object.assign({}, prev, a, {
+      /* a conflict must never be downgraded to a plain update, and a project
+         this device had never seen stays "new" until you actually open it */
+      kind: (KIND_RANK[a.kind] || 0) >= (KIND_RANK[prev.kind] || 0) ? a.kind : prev.kind,
+      /* the oldest before, so the diff spans everything you have not looked
+         at rather than only the last hop */
+      before: prev.before || a.before,
+      ts: Date.now(),
+      read: false,
+      times: (prev.times || 1) + 1
+    }));
+  });
+  pruneInbox();
   while (inbox.length > 60) inbox.pop();
   saveInbox(); paintInboxBadges();
   return arrivals.length;
@@ -2122,6 +2232,7 @@ function paintInbox() {
     const nm = el('div', 'ib-name');
     nm.append(document.createTextNode(m.name || 'Untitled'));
     const tag = el('span', 'ib-tag ' + m.kind); tag.textContent = copy.tag; nm.appendChild(tag);
+    if ((m.times || 1) > 1) { const t = el('span', 'ib-times'); t.textContent = m.times + '×'; nm.appendChild(t); }
     const meta = el('div', 'ib-meta');
     meta.textContent = m.after.cuts + ' cuts · ' + m.after.tracks + ' tracks · ' + m.after.notes + ' notes · ' + fmtWhen(m.ts);
     main.append(nm, meta);
@@ -2183,7 +2294,11 @@ function paintInbox() {
     msg.append(row, det); box.appendChild(msg);
   });
 }
-function openInbox() { $('#inbox').classList.add('on'); paintInbox(); }
+function openInbox() {
+  if (pruneInbox()) { saveInbox(); paintInboxBadges(); }
+  $('#inbox').classList.add('on');
+  paintInbox();
+}
 function closeInbox() { $('#inbox').classList.remove('on'); }
 $('#ibClose').onclick = closeInbox;
 $('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
@@ -2249,6 +2364,7 @@ function go(next) {
   $('#library').classList.toggle('on', next === 'library');
   $('#send').classList.toggle('on', next === 'send');
   $('#sync').classList.remove('on');   /* a destination, not a modal — never leave it stuck over a new screen */
+  if (next !== 'capture') $('#pick').classList.remove('on');
   $('#stage').classList.toggle('gone', next !== 'capture');
   $('#editor').classList.toggle('on', next === 'edit');
   if (next === 'home') paintHome();
@@ -3501,6 +3617,7 @@ $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.rem
 $('#libBack').onclick = () => go('home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
+  recKind = 'project'; recTL = null;
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id; claimMine(sc.id);
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
   markPLoaded(sc);
@@ -3511,7 +3628,12 @@ function freshScene() {
   return sc;
 }
 $('#scNew').onclick = () => freshScene();
-$('#hNew').onclick = () => freshScene();
+$('#hNew').onclick = () => {
+  /* with nothing to add to, the question has one answer — do not ask it */
+  const addable = visibleScenes().some(s => ((s.data || {}).markers || []).length);
+  if (isCompact() && addable) return openPick();
+  freshScene();
+};
 $('#hScenes').onclick = () => go('library');
 $('#hContinue').onclick = () => go(P.markers.length ? workScreen() : 'capture');
 $('#scImport').onclick = () => $('#jsonIn').click();
@@ -4008,7 +4130,8 @@ function endRec() {
        song-section pass and a drum-break pass can both exist */
     retakeMode = false;
     P.takeNum++;
-    const t = addTimeline(marks, 'Timeline ' + P.timelines.length);
+    const t = addTimeline(marks, 'Timeline ' + (P.timelines.length + 1));   /* counted before the push */
+    recKind = 'timeline'; recTL = t;
     recalc(); playPos = 0; lastPos = 0;
     if (!compact) { fit(); render(); }
     save();
@@ -4034,6 +4157,52 @@ $('#finishTap').onclick = endRec;
 $('#undoTap').onclick = () => {
   if (liveMarks.length > 1) { liveMarks.pop(); $('#markCount').textContent = liveMarks.length; }
 };
+
+/* What the last capture produced, so the hand-over screen knows whether the
+   name box is naming a project or the timeline that just went into one. */
+let recKind = 'project', recTL = null;
+
+/* On a phone there is no editor, so "+ Timeline" — the only way to record a
+   second pass — was on a screen that device never shows. This is that door:
+   a new project, or the cuts you are about to tap going into one you already
+   have. On anything with an editor, New breakdown still goes straight in. */
+function openPick() {
+  const list = $('#pkList');
+  list.innerHTML = '';
+  const scenes = visibleScenes()
+    .filter(s => ((s.data || {}).markers || []).length)
+    .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  if (!scenes.length) {
+    const e = el('div', 'pk-none');
+    e.textContent = 'Nothing to add to yet — record a project first.';
+    list.appendChild(e);
+  }
+  scenes.forEach(sc => {
+    const st = statsOf(sc.data);
+    const b = el('button', 'pk-item');
+    const main = el('div', 'pk-main');
+    const nm = el('b'); nm.textContent = sc.name || 'Untitled';
+    const meta = el('span');
+    meta.textContent = st.lanes + (st.lanes === 1 ? ' timeline' : ' timelines') + ' · ' + st.cuts + ' cuts · ' + fmtWhen(sc.updated || Date.now());
+    main.append(nm, meta);
+    const add = el('span', 'pk-add'); add.textContent = '+';
+    b.append(main, add);
+    b.onclick = () => startRetakeOn(sc.id);
+    list.appendChild(b);
+  });
+  $('#pick').classList.add('on');
+}
+const closePick = () => $('#pick').classList.remove('on');
+$('#pkBack').onclick = () => { closePick(); go('home'); };
+$('#pkNew').onclick = () => { closePick(); recKind = 'project'; freshScene(); };
+
+function startRetakeOn(id) {
+  const sc = lib.scenes.find(s => s.id === id && !s.deleted);
+  if (!sc) return toast('That project is no longer here');
+  closePick();
+  loadScene(sc);
+  startRetake();
+}
 
 function startRetake() {
   stopPlay();
