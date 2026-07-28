@@ -64,6 +64,30 @@ async function write(owner, incoming) {
   return Object.keys(have).map(function (k) { return have[k]; });
 }
 
+// "Make what I see here the one" — for when two devices have drifted apart
+// and comparing them by hand is worse than picking one.
+//
+// Nothing is destroyed. Anything the chosen device does not have is marked
+// deleted with a fresh timestamp, which is the same tombstone a normal
+// delete leaves, so the other devices pick the removal up through the merge
+// they already run. The document and its data stay in the collection, so a
+// mistake is recoverable by hand rather than gone.
+async function makeAuthoritative(owner, incoming) {
+  const keep = {};
+  (incoming || []).forEach(function (s) { if (s && s.id) keep[s.id] = true; });
+  const mine = await read(owner);
+  const drop = mine.filter(function (s) { return !keep[s.id] && !s.deleted; });
+  if (drop.length) {
+    await scenes().bulkWrite(drop.map(function (s) {
+      return { updateOne: {
+        filter: Object.assign({ _id: s.id }, scope(owner)),
+        update: { $set: { deleted: true, updated: Date.now() } }
+      } };
+    }), { ordered: false });
+  }
+  return { scenes: await write(owner, incoming), removed: drop.length };
+}
+
 // Everything written through the ?key= endpoint has no owner. The first
 // account to exist takes it, so the projects already in the database are
 // simply there after signing in — one field set on each document, no export,
@@ -149,7 +173,7 @@ const clearFails = user => users().updateOne({ _id: user }, { $unset: { failFirs
 module.exports = {
   ITER, USER_RE, COOKIE,
   scenes, users, meta,
-  read, write, adopt,
+  read, write, adopt, makeAuthoritative,
   hash, sameDigest, rand,
   mintToken, readToken, cookieHeader, tokenFrom,
   tooManyFails, noteFail, clearFails

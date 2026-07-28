@@ -947,6 +947,32 @@ body.editing #ytDock.on{display:block}
 #ytBtn.on{color:var(--play);border-color:rgba(217,143,196,.45)}
 @media (max-width:640px){#ytDock{right:8px;left:8px;bottom:8px;width:auto}}
 
+/* ── picking a device when they have drifted apart ───── */
+/* a confirmation that reaches other devices has to sit above whatever is
+   already open, or it can be answered by a click meant for something else */
+#mainOf{z-index:50}
+.mo-in{max-width:460px;margin:0 auto;padding:min(11vh,90px) 22px 48px}
+.mo-in h1{font-size:clamp(24px,5vw,32px);font-weight:700;letter-spacing:-.03em;margin:0 0 10px}
+.mo-lede{margin:0 0 24px;font-size:14px;line-height:1.55;color:var(--dim)}
+.mo-cols{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.mo-col{
+  flex:1;text-align:center;padding:16px 10px;border-radius:12px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+}
+.mo-col b{display:block;font-family:var(--mono);font-size:26px;color:var(--text)}
+.mo-col span{font-family:var(--ui);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.mo-arrow{color:var(--faint);font-size:15px;flex:none}
+.mo-drop{margin-bottom:20px}
+.mo-drop-h{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--live);margin-bottom:8px}
+.mo-drop-i{
+  font-family:var(--txt);font-size:13.5px;color:var(--dim);padding:8px 11px;margin-bottom:5px;
+  border-radius:8px;border:1px solid rgba(232,201,155,.28);background:rgba(232,201,155,.07);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.mo-acts{display:flex;flex-direction:column;gap:9px}
+.mo-acts .btn{justify-content:center;text-align:center;padding:14px;min-height:46px}
+.mo-note{margin:20px 0 0;font-size:11.5px;line-height:1.6;color:var(--faint)}
+
 /* ── the login screen, on the build that has accounts ── */
 #auth{z-index:60;background:
   radial-gradient(90% 60% at 50% 0%, rgba(155,140,255,.20), transparent 62%),
@@ -973,6 +999,10 @@ body.editing #ytDock.on{display:block}
 .au-foot button:hover{color:var(--text)}
 /* the account build has no address to paste and no device to pair */
 body.cloud #sync{display:none}
+#spMainRow{display:none}
+body.cloud #spMainRow{display:flex}
+#spMain{color:var(--live)}
+#spMain:hover{color:var(--text)}
 
 /* ── pairing ────────────────────────────────────────── */
 .pair-in{max-width:520px;margin:0 auto;padding:min(8vh,56px) 22px 48px;text-align:center}
@@ -1471,6 +1501,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span class="spacer" style="flex:1"></span>
     <button id="spLog">Technical log</button>
   </div>
+  <div class="sp-foot" id="spMainRow">
+    <button id="spMain">Devices disagree? Use this one</button>
+  </div>
 </div>
 
 <div id="sync" class="page">
@@ -1523,6 +1556,25 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <pre id="dpCode"></pre>
       <button class="btn" id="dpCopyCode">Copy the code</button>
     </div>
+  </div>
+</div>
+
+<div id="mainOf" class="page">
+  <div class="mo-in">
+    <span class="eyebrow">make this the one</span>
+    <h1>Use these projects everywhere?</h1>
+    <p class="mo-lede" id="moLede">Checking what your other devices have…</p>
+    <div class="mo-cols">
+      <div class="mo-col"><b id="moHere">—</b><span>here</span></div>
+      <div class="mo-arrow">→</div>
+      <div class="mo-col"><b id="moThere">—</b><span>on the account</span></div>
+    </div>
+    <div class="mo-drop" id="moDrop"></div>
+    <div class="mo-acts">
+      <button class="btn key" id="moGo" disabled>Use this device's projects</button>
+      <button class="btn ghost" id="moCancel">Leave everything as it is</button>
+    </div>
+    <p class="mo-note">Nothing is destroyed. Anything removed is tombstoned on the server, not erased, and this device keeps its own rolling backups.</p>
   </div>
 </div>
 
@@ -3144,6 +3196,7 @@ $('#spPair').onclick = () => {
   closeSyncPop(); srv.on ? openPair() : setupSync();
 };
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
+$('#spMain').onclick = () => openMainOf();
 function setupSync() {
   closeSyncPop();
   /* there is no address to paste on the account build — the way in is the
@@ -3300,6 +3353,79 @@ function cloudSignedOut(why) {
   if (why) authMsg(why, true);
   return false;
 }
+
+/* Two devices drift apart — a fork here, a delete that never travelled, a
+   phone that has not synced in a week — and comparing them by hand is worse
+   than picking one. This says which one is right.
+
+   It reaches the other devices, so it asks first, and it says exactly what
+   will go rather than how many. Nothing is destroyed: what goes is
+   tombstoned server-side the same way a normal delete is, which is also how
+   the other devices learn about it. */
+async function openMainOf() {
+  closeSyncPop(); closeInbox();
+  if (!cloud.on || !cloud.user) return setupSync();
+  const page = $('#mainOf');
+  page.classList.add('on');
+  $('#moGo').disabled = true;
+  $('#moDrop').innerHTML = '';
+  $('#moLede').textContent = 'Checking what your other devices have…';
+  $('#moHere').textContent = visibleScenes().length;
+  $('#moThere').textContent = '—';
+  try {
+    const r = await api('/state');
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    const theirs = (r.data.scenes || []).filter(x => !x.deleted);
+    const mine = new Set(lib.scenes.filter(x => !x.deleted).map(x => x.id));
+    const gone = theirs.filter(x => !mine.has(x.id));
+    $('#moThere').textContent = theirs.length;
+    $('#moLede').textContent = gone.length
+      ? 'These projects are on the account but not on this device. Going ahead removes them from your other devices too.'
+      : 'Everything on the account is already here — going ahead just makes sure the others match.';
+    const box = $('#moDrop');
+    if (gone.length) {
+      const h = el('div', 'mo-drop-h');
+      h.textContent = gone.length === 1 ? '1 project would go' : gone.length + ' projects would go';
+      box.appendChild(h);
+      gone.slice(0, 8).forEach(x => {
+        const i = el('div', 'mo-drop-i');
+        const st = statsOf(x.data);
+        i.textContent = (x.name || 'Untitled') + ' — ' + st.cuts + ' cuts, ' + st.notes + ' notes';
+        box.appendChild(i);
+      });
+      if (gone.length > 8) {
+        const m = el('div', 'mo-drop-i'); m.textContent = 'and ' + (gone.length - 8) + ' more'; box.appendChild(m);
+      }
+    }
+    $('#moGo').disabled = false;
+  } catch (e) {
+    $('#moLede').textContent = 'Could not reach the account to compare — try again in a moment.';
+    slog('err', 'could not compare the devices', cloudWhy(e));
+  }
+}
+const closeMainOf = () => $('#mainOf').classList.remove('on');
+$('#moCancel').onclick = closeMainOf;
+$('#mainOf').onclick = e => { if (e.target.id === 'mainOf') closeMainOf(); };
+$('#moGo').onclick = async () => {
+  $('#moGo').disabled = true;
+  $('#moLede').textContent = 'Sending…';
+  try {
+    commitP(curScene(), false);
+    const r = await api('/state', { method: 'POST', body: JSON.stringify({ scenes: lib.scenes, mode: 'replace' }) });
+    if (r.status === 401) { closeMainOf(); return cloudSignedOut('Your session ran out. Sign in again.'); }
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    absorbScenes(r.data.scenes, cloud.last);
+    cloud.last = Date.now(); cloud.lastPull = Date.now(); cloud.err = ''; dirty = false;
+    saveCloud(); paintCloud();
+    slog('ok', 'this device is now the one', (r.data.removed || 0) + ' removed from the account');
+    closeMainOf();
+    toast(r.data.removed ? 'done — ' + r.data.removed + ' removed everywhere' : 'done — your devices match');
+  } catch (e) {
+    $('#moGo').disabled = false;
+    $('#moLede').textContent = 'That did not go through: ' + cloudWhy(e);
+    slog('err', 'could not make this device the one', cloudWhy(e));
+  }
+};
 
 async function cloudSignOut() {
   closeSyncPop();

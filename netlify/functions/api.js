@@ -99,6 +99,11 @@ exports.handler = async function (event) {
       if (method === 'POST') {
         const b = bodyOf(event);
         if (!Array.isArray(b.scenes)) return reply(400, { error: 'no scenes' });
+        // an explicit, asked-for act: this device's set becomes the account's
+        if (b.mode === 'replace') {
+          const r = await db.makeAuthoritative(user, b.scenes);
+          return reply(200, { scenes: r.scenes, removed: r.removed, updated: Date.now() });
+        }
         return reply(200, { scenes: await db.write(user, b.scenes), updated: Date.now() });
       }
 
