@@ -202,6 +202,48 @@ body:not(.editing) .drop .edit-only{display:none}
   font-family:var(--ui);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
   max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+#tlbar{
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
+  border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
+  background:linear-gradient(180deg, rgba(44,39,70,.6), rgba(32,28,52,.42));
+}
+#tlChips{display:flex;gap:4px;min-width:0;overflow-x:auto;overflow-y:hidden}
+#tlChips::-webkit-scrollbar{height:0}
+.tl-chip{
+  display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:7px;flex:none;
+  font-family:var(--ui);font-size:10.5px;letter-spacing:.06em;color:var(--dim);
+  border:1px solid transparent;background:rgba(255,255,255,.035);transition:.15s;white-space:nowrap;
+}
+.tl-chip i{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
+.tl-chip:hover{background:rgba(255,255,255,.07)}
+.tl-chip.on{color:var(--text);background:color-mix(in srgb,var(--c) 20%,transparent);border-color:var(--c)}
+.tl-chip.on i{box-shadow:0 0 10px var(--c)}
+.tl-chip b{font-weight:400;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.tl-chip.on b{color:var(--text)}
+.tl-chip input{
+  background:none;border:none;font-family:var(--ui);font-size:10.5px;letter-spacing:.06em;
+  padding:0;width:96px;color:inherit;
+}
+.tl-chip .x{color:var(--faint);font-size:14px;line-height:1;padding:0 2px}
+.tl-chip .x:hover{color:var(--play)}
+.tl-hint{font-family:var(--ui);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+@media (max-width:900px){.tl-hint{display:none}#tlbar{padding-left:12px;gap:8px}}
+@media (pointer:coarse){.tl-chip{height:38px;padding:0 14px}}
+
+/* the stacked view: every timeline you tapped, side by side, unmerged */
+.tl-strip{position:relative;border-bottom:1px solid var(--line);background:rgba(0,0,0,.16)}
+.tl-row{position:relative;height:22px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer}
+.tl-row:last-child{border-bottom:none}
+.tl-row:hover{background:rgba(255,255,255,.045)}
+.tl-row.on{background:color-mix(in srgb,var(--c) 13%,transparent)}
+.tl-row i{position:absolute;top:4px;bottom:4px;width:2px;margin-left:-1px;background:var(--c);border-radius:2px}
+.tl-row.on i{top:2px;bottom:2px;box-shadow:0 0 6px var(--c)}
+.tl-row u{
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);text-decoration:none;z-index:2;
+  font-family:var(--ui);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  background:rgba(16,17,26,.82);padding:2px 7px;border-radius:20px;pointer-events:none;
+}
+.tl-row.on u{color:var(--text)}
 #layerbar{
   display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
@@ -407,20 +449,6 @@ body.live #notebar::before{content:'';position:absolute;left:0;right:0;top:0;hei
 .nb-hint{flex:none;font-family:var(--ui);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 #nbTab{display:none;flex:none;font-family:var(--ui);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:rgba(255,255,255,.05)}
 
-/* ── take compare ───────────────────────────────────── */
-#takebar{
-  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:20;
-  width:min(720px,calc(100vw - 24px));padding:16px;border-radius:12px;
-  border:1px solid rgba(232,201,155,.35);background:rgba(16,17,22,.98);
-  backdrop-filter:blur(22px);box-shadow:0 28px 70px rgba(0,0,0,.7);display:none;
-}
-#takebar.on{display:block}
-#takebar h3{margin:0 0 4px;font-family:var(--ui);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--live);font-weight:400}
-#takebar p{margin:0 0 14px;font-size:13.5px;color:var(--dim)}
-.mini{height:32px;border-radius:6px;border:1px solid var(--line);position:relative;margin-bottom:7px;background:rgba(255,255,255,.02);overflow:hidden}
-.mini b{position:absolute;left:10px;top:10px;font-family:var(--ui);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:400}
-.mini i{position:absolute;top:0;bottom:0;width:1px}
-.take-actions{display:flex;gap:7px;justify-content:flex-end}
 
 /* ── pages ─────────────────────────────────────────── */
 .page{
@@ -960,7 +988,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span id="savedTag">saved</span>
     <button id="syncBtn" title="Send or get work"><i></i><span id="syncLbl">sync off</span></button>
     <button id="sceneBtn" title="Projects"><b id="sceneName">Project 1</b><span>▸</span></button>
-    <button class="btn ghost" id="retakeBtn" title="Record another pass of cuts — your notes stay put">↻ Retake</button>
+    <button class="btn ghost" id="retakeBtn" title="Tap a second set of cuts — drum breaks, say — kept beside the first">+ Timeline</button>
     <span id="audioName"></span>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
@@ -969,6 +997,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button id="zoomFit" title="Fit to width">FIT</button>
       <button id="zoomIn" title="Zoom in">+</button>
     </div>
+  </div>
+  <div id="tlbar">
+    <span class="lb-lbl">timelines</span>
+    <div id="tlChips"></div>
+    <button class="btn ghost" id="newTL">+ Record another</button>
+    <div class="spacer"></div>
+    <span class="tl-hint">notes land in the highlighted one</span>
   </div>
   <div id="layerbar">
     <span class="lb-lbl">layers</span>
@@ -991,6 +1026,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
         <div class="inner" id="inner">
           <div class="seghi" id="seghi"></div>
           <div class="ruler" id="ruler"><canvas id="wave"></canvas></div>
+          <div class="tl-strip" id="tlStrip"></div>
           <div class="lanes" id="lanes"></div>
           <div class="playhead" id="playhead"><div class="trail"></div><div class="beam"></div><div class="phdot"></div></div>
         </div>
@@ -1000,16 +1036,6 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 </div>
 
-<div id="takebar">
-  <h3>take <span id="takeNum">2</span> ready</h3>
-  <p>Your notes stay where they are either way — they're pinned to time, not to cuts.</p>
-  <div class="mini" id="miniOld"><b>current</b></div>
-  <div class="mini" id="miniNew"><b>new take</b></div>
-  <div class="take-actions">
-    <button class="btn ghost" id="discardTake">Discard new take</button>
-    <button class="btn" id="mergeTake" title="Combine both sets of cuts — close duplicates are dropped">Merge both</button>
-    <button class="btn key" id="keepTake">Keep new take</button>
-  </div>
 </div>
 
 <div id="notebar">
@@ -1238,8 +1264,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* ═══ state ═══════════════════════════════════════════ */
 const PALETTE = ['#8FA6FF','#D98FC4','#8FC9A0','#E8C99B','#7FD4E0','#B39DDB'];
 const LAYER_COLORS = ['#8FA6FF','#D98FC4','#E8C99B','#8FC9A0','#7FD4E0','#B39DDB'];
+const TL_COLORS = ['#8FA6FF', '#D98FC4', '#8FC9A0', '#E8C99B', '#7FD4E0', '#B39DDB'];
 const P = {
+  /* markers is the ACTIVE timeline's marks — the very same array object, not
+     a copy. Keeping that identity is what lets every existing read and every
+     in-place push/splice keep working now that a project holds several
+     timelines. Only ever repoint it through setMarks/setActiveTL. */
   markers: [],            // seconds, sorted, first is 0
+  timelines: [],          // {id,name,color,marks:[...]} — song sections, drum breaks, …
+  activeTL: 0,
   layers: [],             // {id,name,color,vis,tracks:[...]}
   active: 0,
   overlay: false,
@@ -1247,6 +1280,18 @@ const P = {
   audioName: '',
   takeNum: 1
 };
+const curTL = () => P.timelines[P.activeTL] || P.timelines[0];
+function setMarks(arr) { const t = curTL(); if (t) t.marks = arr; P.markers = arr; }
+function setActiveTL(i) {
+  P.activeTL = clamp(i, 0, P.timelines.length - 1);
+  P.markers = P.timelines[P.activeTL].marks;
+}
+function addTimeline(marks, name) {
+  const t = { id: uid(), name: name || ('Timeline ' + (P.timelines.length + 1)),
+    color: TL_COLORS[P.timelines.length % TL_COLORS.length], marks: marks || [] };
+  P.timelines.push(t); setActiveTL(P.timelines.length - 1);
+  return t;
+}
 let mode = 'idle';        // idle | rec | edit
 let zoom = 1, basePps = 6;
 let sel = null;           // selected block element
@@ -1257,7 +1302,6 @@ let cancelDraw = null;    // abort an in-progress lane drag
 let armedKey = null;      // track that catches typed notes
 let noteOpen = false, noteTarget = null, noteLocked = false;
 let liveMode = false, snapMode = 'section';
-let pendingTake = null;
 let freshMarkers = [];   /* cut times to briefly highlight after a merge */
 let peaks = null;
 
@@ -1669,7 +1713,7 @@ $('#sdSend').onclick = async () => {
     st.className = 'sd-state err'; st.textContent = lastErr || 'send failed — see the sync log';
   }
 };
-$('#sdAgain').onclick = () => { $('#takebar').classList.remove('on'); startRetake(); };
+$('#sdAgain').onclick = () => startRetake();
 $('#sdEditor').onclick = () => go('edit');
 $('#sdHome').onclick = () => go('home');
 
@@ -1915,7 +1959,7 @@ function paintHome() {
 
 /* ═══ scenes ══════════════════════════════════════════ */
 let lib = { current: null, scenes: [] };   /* {id,name,updated,data} */
-const SCENE_KEYS = ['markers', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum'];
+const SCENE_KEYS = ['markers', 'timelines', 'activeTL', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum'];
 const sceneData = () => { const o = {}; SCENE_KEYS.forEach(k => o[k] = P[k]); return o; };
 const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 
@@ -2044,8 +2088,10 @@ function tutorialScene() {
 }
 function statsOf(data) {
   const d = data || {}, L = d.layers || [];
+  const tls = (d.timelines && d.timelines.length) ? d.timelines : null;
   return {
-    cuts: (d.markers || []).length,
+    lanes: tls ? tls.length : 1,
+    cuts: tls ? tls.reduce((n, t) => n + (t.marks || []).length, 0) : (d.markers || []).length,
     tracks: L.reduce((n, l) => n + (l.tracks || []).length, 0),
     notes: L.reduce((n, l) => n + (l.tracks || []).reduce((m, t) => m + (t.blocks || []).length, 0), 0)
   };
@@ -2053,7 +2099,10 @@ function statsOf(data) {
 function sceneStats(sc) {
   const s = statsOf(sc.data);
   const n = (v, w) => v + ' ' + w + (v === 1 ? '' : 's');
-  return [n(s.cuts, 'cut'), n(s.tracks, 'track'), n(s.notes, 'note'), fmtWhen(sc.updated || Date.now())].join(' · ');
+  const parts = [n(s.cuts, 'cut')];
+  if (s.lanes > 1) parts.push(n(s.lanes, 'timeline'));
+  parts.push(n(s.tracks, 'track'), n(s.notes, 'note'), fmtWhen(sc.updated || Date.now()));
+  return parts.join(' · ');
 }
 function sceneFile(sc) {
   return { tapline: 1, kind: 'scene', name: sc.name, exported: new Date().toISOString(), scene: sc.data };
@@ -2169,20 +2218,25 @@ const APPS_SCRIPT_SHEET = [
   "",
   "  var nt = ss.getSheetByName('notes') || ss.insertSheet('notes');",
   "  nt.clear();",
-  "  var out = [['project', 'layer', 'track', 'section', 'start', 'end', 'note']];",
+  "  var out = [['project', 'lane', 'layer', 'track', 'section', 'start', 'end', 'note']];",
   "  (o.scenes || []).forEach(function (sc) {",
-  "    var d = sc.data || {}, mk = d.markers || [];",
+  "    var d = sc.data || {};",
+  "    var lanes = (d.timelines && d.timelines.length) ? d.timelines",
+  "      : [{ id: null, name: 'Song sections', marks: d.markers || [] }];",
   "    (d.layers || []).forEach(function (L) {",
   "      (L.tracks || []).forEach(function (T) {",
   "        (T.blocks || []).forEach(function (b) {",
-  "          var n = 1;",
+  "          var lane = null;",
+  "          for (var k = 0; k < lanes.length; k++) if (lanes[k].id && lanes[k].id === b.tl) lane = lanes[k];",
+  "          if (!lane) lane = lanes[0];",
+  "          var mk = lane.marks || [], n = 1;",
   "          for (var i = 0; i < mk.length - 1; i++) if (b.s >= mk[i] - 0.001) n = i + 1;",
-  "          out.push([sc.name, L.name, T.name, n, clock(b.s), clock(b.e), b.text]);",
+  "          out.push([sc.name, lane.name, L.name, T.name, n, clock(b.s), clock(b.e), b.text]);",
   "        });",
   "      });",
   "    });",
   "  });",
-  "  nt.getRange(1, 1, out.length, 7).setValues(out);",
+  "  nt.getRange(1, 1, out.length, 8).setValues(out);",
   "  nt.setFrozenRows(1);",
   "}",
   "",
@@ -2653,7 +2707,7 @@ function freshScene() {
   markPLoaded(sc);
   armedKey = null; selMarker = -1; sel = null; playPos = 0; lastPos = 0;
   liveMarks = []; $('#markCount').textContent = '0';
-  $('#idleHint').style.display = 'block'; $('#takebar').classList.remove('on');
+  $('#idleHint').style.display = 'block';
   paintSceneName(); store.set(LIBKEY, lib); syncSoon(); go('capture');
   return sc;
 }
@@ -2907,15 +2961,24 @@ function endRec() {
   audio.pause();
   $('#stage').classList.remove('rec');
   $('#liveFoot').style.display = 'none';
-  /* a retake still needs the editor: comparing two takes is a timeline job */
-  const compact = isCompact() && !retakeMode;
+  const compact = isCompact();
   go(compact ? 'send' : 'edit');
   if (retakeMode) {
-    pendingTake = marks; P.takeNum++;
-    showTakeBar(marks);
+    /* additive: keep what you already tapped and stack this beside it, so a
+       song-section pass and a drum-break pass can both exist */
     retakeMode = false;
+    P.takeNum++;
+    const t = addTimeline(marks, 'Timeline ' + P.timelines.length);
+    recalc(); playPos = 0; lastPos = 0;
+    if (!compact) { fit(); render(); }
+    save();
+    logHist(lib.current, 'Recorded "' + t.name + '" (' + marks.length + ' cuts)');
+    freshMarkers = marks.slice(); if (!compact) render();
+    setTimeout(() => { freshMarkers = []; if (screen === 'edit') render(); }, 2600);
+    toast('Added "' + t.name + '" — ' + marks.length + ' cuts');
+    if (compact) paintSend();
   } else {
-    P.markers = marks;
+    setMarks(marks);
     recalc(); playPos = 0; lastPos = 0;
     /* on a small screen keep it to the timeline — tracks are for the device
        you can actually type on, and an empty scene still opens fine there */
@@ -2938,61 +3001,12 @@ function startRetake() {
   $('#markCount').textContent = '0';
   go('capture');
   $('#idleHint').style.display = 'block';
-  $('#takebar').classList.remove('on');
-  toast('Tap to start take ' + (P.takeNum + 1));
+  toast('Tap the new timeline — what you already have is kept');
 }
 $('#retakeBtn').onclick = startRetake;
+$('#newTL').onclick = startRetake;
 
 /* take compare */
-function showTakeBar(marks) {
-  $('#takeNum').textContent = P.takeNum;
-  const dur = Math.max(P.duration, marks[marks.length - 1] + 4);
-  const paint = (node, arr, color) => {
-    node.querySelectorAll('i').forEach(n => n.remove());
-    arr.forEach(t => {
-      const i = el('i'); i.style.left = (t / dur * 100) + '%';
-      i.style.background = color; node.appendChild(i);
-    });
-  };
-  paint($('#miniOld'), P.markers, 'rgba(239,234,255,.35)');
-  paint($('#miniNew'), marks, 'var(--cut)');
-  $('#miniOld').querySelector('b').textContent = 'current · ' + P.markers.length + ' cuts';
-  $('#miniNew').querySelector('b').textContent = 'take ' + P.takeNum + ' · ' + marks.length + ' cuts';
-  $('#takebar').classList.add('on');
-}
-$('#keepTake').onclick = () => {
-  pushUndo('the old take');
-  P.markers = pendingTake;
-  recalc();
-  pendingTake = null; $('#takebar').classList.remove('on'); fit(); save();
-  logHist(lib.current, 'Kept take ' + P.takeNum + ' (' + P.markers.length + ' cuts)');
-  toast('Take kept');
-  freshMarkers = P.markers.slice(); render();
-  setTimeout(() => { freshMarkers = []; render(); }, 2600);
-};
-$('#discardTake').onclick = () => {
-  pendingTake = null; P.takeNum--; $('#takebar').classList.remove('on'); render();
-  toast('Take discarded');
-};
-$('#mergeTake').onclick = () => {
-  pushUndo('the old take');
-  const NEAR = .5;                 /* cuts closer than this to an existing one are treated as the same cut */
-  const merged = P.markers.slice();
-  const added = [];
-  pendingTake.forEach(t => {
-    if (!merged.some(m => Math.abs(m - t) < NEAR)) { merged.push(t); added.push(t); }
-  });
-  merged.sort((a, b) => a - b);
-  P.markers = merged;
-  recalc();
-  pendingTake = null; $('#takebar').classList.remove('on'); fit(); render(); save();
-  logHist(lib.current, 'Merged take ' + P.takeNum + ' — added ' + added.length + (added.length === 1 ? ' cut' : ' cuts'));
-  toast(added.length ? 'Merged — ' + added.length + ' new ' + (added.length === 1 ? 'cut' : 'cuts') : 'Merged — nothing new to add');
-  if (added.length) {
-    freshMarkers = added; render();
-    setTimeout(() => { freshMarkers = []; render(); }, 2600);
-  }
-};
 
 /* ═══ tracks & blocks ═════════════════════════════════ */
 function migrate(o) {
@@ -3014,6 +3028,23 @@ function migrate(o) {
   if (typeof o.active !== 'number') o.active = 0;
   o.active = clamp(o.active, 0, o.layers.length - 1);
   o.overlay = !!o.overlay;
+
+  /* every project made before timelines existed has a single flat markers[] */
+  if (!Array.isArray(o.timelines) || !o.timelines.length) {
+    o.timelines = [{ id: uid(), name: 'Song sections', color: TL_COLORS[0],
+      marks: Array.isArray(o.markers) ? o.markers.slice() : [] }];
+  }
+  o.timelines.forEach((t, i) => {
+    t.id = t.id || uid();
+    t.name = t.name || ('Timeline ' + (i + 1));
+    t.color = t.color || TL_COLORS[i % TL_COLORS.length];
+    t.marks = Array.isArray(t.marks) ? t.marks : [];
+  });
+  if (typeof o.activeTL !== 'number') o.activeTL = 0;
+  o.activeTL = clamp(o.activeTL, 0, o.timelines.length - 1);
+  /* hand back the SAME array the active timeline holds, so Object.assign(P, …)
+     leaves P.markers and P.timelines[activeTL].marks pointing at one object */
+  o.markers = o.timelines[o.activeTL].marks;
   return o;
 }
 migrate(P);
@@ -3090,6 +3121,62 @@ function snap(t) {
 }
 
 /* ═══ render ══════════════════════════════════════════ */
+function renderTLBar() {
+  const c = $('#tlChips'); if (!c) return;
+  c.innerHTML = '';
+  P.timelines.forEach((t, i) => {
+    const on = i === P.activeTL;
+    const chip = el('button', 'tl-chip' + (on ? ' on' : ''));
+    chip.style.setProperty('--c', t.color);
+    chip.appendChild(el('i'));
+    if (on) {
+      const inp = el('input'); inp.value = t.name;
+      inp.style.width = Math.max(60, t.name.length * 6.6) + 'px';
+      inp.oninput = () => { t.name = inp.value; inp.style.width = Math.max(60, inp.value.length * 6.6) + 'px'; save(); renderTLStrip(); };
+      inp.onclick = e => e.stopPropagation();
+      inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); };
+      chip.appendChild(inp);
+    } else {
+      const sp = el('span'); sp.textContent = t.name; chip.appendChild(sp);
+    }
+    const n = el('b'); n.textContent = t.marks.length; chip.appendChild(n);
+    if (on && P.timelines.length > 1) {
+      const x = el('span', 'x'); x.textContent = '×'; x.title = 'Delete this timeline';
+      x.onclick = e => {
+        e.stopPropagation();
+        if (!x._armed) { x._armed = true; toast('delete "' + t.name + '" and its ' + t.marks.length + ' cuts? tap × again');
+          setTimeout(() => { x._armed = false; }, 2800); return; }
+        pushUndo('a timeline');
+        const nm = t.name;
+        P.timelines.splice(i, 1);
+        setActiveTL(Math.min(i, P.timelines.length - 1));
+        recalc(); render(); save();
+        logHist(lib.current, 'Removed timeline "' + nm + '"');
+      };
+      chip.appendChild(x);
+    }
+    chip.onclick = () => { if (!on) { setActiveTL(i); recalc(); render(); save(); } };
+    c.appendChild(chip);
+  });
+}
+
+/* Draw every timeline as its own row so two passes stay visibly separate —
+   the active one also keeps the full-height, draggable markers in the ruler. */
+function renderTLStrip() {
+  const box = $('#tlStrip'); if (!box) return;
+  box.innerHTML = '';
+  box.style.display = P.timelines.length > 1 ? 'block' : 'none';
+  if (P.timelines.length < 2) return;
+  P.timelines.forEach((t, i) => {
+    const row = el('div', 'tl-row' + (i === P.activeTL ? ' on' : ''));
+    row.style.setProperty('--c', t.color);
+    row.title = t.name + ' · ' + t.marks.length + ' cuts — click to write notes against this one';
+    const tag = el('u'); tag.textContent = t.name; row.appendChild(tag);
+    t.marks.forEach(m => { const tick = el('i'); tick.style.left = t2x(m) + 'px'; row.appendChild(tick); });
+    row.onclick = () => { if (i !== P.activeTL) { setActiveTL(i); recalc(); render(); save(); } };
+    box.appendChild(row);
+  });
+}
 function renderLayerBar() {
   const c = $('#chips'); c.innerHTML = '';
   P.layers.forEach((L, i) => {
@@ -3135,6 +3222,7 @@ function render() {
   const w = Math.max(t2x(P.duration), 200);
   $('#inner').style.width = w + 'px';
   $('#cutCount').textContent = P.markers.length;
+  renderTLBar(); renderTLStrip();
   renderLayerBar();
 
   /* ruler */
@@ -3426,7 +3514,7 @@ function laneDown(ev, r, lane) {
   const up = () => {
     removeEventListener('pointermove', mv); removeEventListener('pointerup', up);
     ghost.remove(); cancelDraw = null;
-    const bk = { id: uid(), s, e, text: '' };
+    const bk = { id: uid(), s, e, text: '', tl: (curTL() || {}).id };
     T.blocks.push(bk);
     render();
     const node = document.querySelector('.block[data-id="' + bk.id + '"]');
@@ -3801,7 +3889,7 @@ function closeNote() {
 function placeNote() {
   const inp = $('#noteInput'), txt = inp.value.trim(), T = armedTrack();
   if (!txt || !T || !noteTarget) return;
-  T.blocks.push({ id: uid(), s: noteTarget[0], e: noteTarget[1], text: txt });
+  T.blocks.push({ id: uid(), s: noteTarget[0], e: noteTarget[1], text: txt, tl: (curTL() || {}).id });
   save(); render();
   logHist(lib.current, 'Added note on ' + T.name + ': "' + (txt.length > 40 ? txt.slice(0, 40) + '…' : txt) + '"');
   const nb = $('#notebar');
@@ -3962,7 +4050,9 @@ $('#jsonIn').onchange = async e => {
   } catch (err) { toast('That file is not a Tapline project'); }
 };
 $('#mCopy').onclick = () => {
-  let out = ((curScene() && curScene().name) || 'Breakdown') + (P.audioName ? '  —  ' + P.audioName : '') + '\n\n';
+  let out = ((curScene() && curScene().name) || 'Breakdown') + (P.audioName ? '  —  ' + P.audioName : '') + '\n';
+  if (P.timelines.length > 1) out += 'timeline: ' + curTL().name + '\n';
+  out += '\n';
   P.markers.forEach((t, i) => {
     const b = i + 1 < P.markers.length ? P.markers[i + 1] : P.duration;
     out += String(i + 1).padStart(2, '0') + '  ' + fmt(t) + '–' + fmt(b) + '\n';
@@ -3976,13 +4066,19 @@ $('#mCopy').onclick = () => {
 };
 $('#mCsv').onclick = () => {
   const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-  const rows = [['section', 'start', 'end', 'layer', 'track', 'note'].map(q).join(',')];
-  segList().forEach(([a, b, i]) => {
-    P.layers.forEach(L => L.tracks.forEach(T => {
-      T.blocks.filter(k => k.s < b - .01 && k.e > a + .01).forEach(k => {
-        rows.push([i + 1, fmt(k.s), fmt(k.e), L.name, T.name, k.text].map(q).join(','));
-      });
-    }));
+  const rows = [['lane', 'section', 'start', 'end', 'layer', 'track', 'note'].map(q).join(',')];
+  /* one block per timeline, so the drum pass and the section pass stay legible
+     as separate runs rather than interleaving into one confusing list */
+  P.timelines.forEach(tl => {
+    const mk = tl.marks, segs = [];
+    for (let i = 0; i < mk.length - 1; i++) segs.push([mk[i], mk[i + 1], i]);
+    if (!segs.length) segs.push([0, P.duration, 0]);
+    segs.forEach(([a, b, i]) => {
+      P.layers.forEach(L => L.tracks.forEach(T => {
+        T.blocks.filter(k => (k.tl ? k.tl === tl.id : tl === P.timelines[0]) && k.s < b - .01 && k.e > a + .01)
+          .forEach(k => rows.push([tl.name, i + 1, fmt(k.s), fmt(k.e), L.name, T.name, k.text].map(q).join(',')));
+      }));
+    });
   });
   const sc = curScene();
   const blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
