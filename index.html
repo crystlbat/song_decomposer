@@ -1042,7 +1042,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div class="nb-row">
     <span class="nb-lbl">into</span>
     <div id="nbTracks"></div>
-    <button id="nbSnap" title="Span the whole section, or pin to the cut">snap: section</button>
+    <button id="nbSnap" title="section: fill the whole section · cut: a short mark at the cut · extend: grow until you press enter">snap: section</button>
     <span class="spacer"></span>
     <span class="nb-seg" id="nbSeg">—</span>
   </div>
@@ -3771,7 +3771,8 @@ function advance(dt) {
     /* the pending note follows the playhead until you start typing */
     if (noteOpen && !noteLocked) {
       const nt = targetNow();
-      if (!noteTarget || nt[2] !== noteTarget[2]) { noteTarget = nt; paintNote(); }
+      if (snapMode === 'extend') { noteTarget = nt; paintNoteHi(); }
+      else if (!noteTarget || nt[2] !== noteTarget[2]) { noteTarget = nt; paintNote(); }
     }
     /* show which section the playhead is inside */
     if (!noteOpen) {
@@ -3800,6 +3801,7 @@ $('#audioName').onclick = () => { if ($('#audioName').classList.contains('need')
 function updatePos() {
   const ph = $('#playhead');
   if (ph) ph.style.left = t2x(playPos) + 'px';
+  growNote();
   $('#posLabel').textContent = fmt(playPos) + ' / ' + fmt(P.duration) + (hasAudio() ? '' : ' · tap-time');
   for (const e of blockIndex) {
     const on = playing && playPos >= e.s && playPos < e.e;
@@ -3829,13 +3831,38 @@ function armStep(d) {
   armTrack(R[i].key);
 }
 
+const SNAP_MODES = ['section', 'cut', 'extend'];
+const MIN_EXT = .4;                /* a just-started extend note still needs to be visible */
 function targetNow() {
-  const sg = segAt(clamp(playPos, 0, Math.max(P.duration - .001, 0)));
+  const now = clamp(playPos, 0, Math.max(P.duration - .001, 0));
+  const sg = segAt(now);
   if (snapMode === 'cut') {
     const len = Math.min(Math.max(1.2, (sg[1] - sg[0]) * .18), sg[1] - sg[0]);
     return [sg[0], sg[0] + len, sg[2]];
   }
+  /* extend: pin the start to right here and let the end trail the playhead
+     until enter — for a passage whose length is the point */
+  if (snapMode === 'extend') return [now, Math.min(now + MIN_EXT, P.duration), sg[2]];
   return [sg[0], sg[1], sg[2]];
+}
+
+/* Called every frame while a note is open. Only touches the two things that
+   actually move, because paintNote() rebuilds the track pills and would
+   throw away focus and selection sixty times a second. */
+function paintNoteHi() {
+  if (!noteTarget) return;
+  const hi = $('#seghi');
+  hi.style.left = t2x(noteTarget[0]) + 'px';
+  hi.style.width = Math.max(t2x(noteTarget[1] - noteTarget[0]), 2) + 'px';
+  const sg = $('#nbSeg');
+  if (sg) sg.textContent = (noteLocked ? 'holding · ' : 'starts at ') + fmt(noteTarget[0]) + '–' + fmt(noteTarget[1]);
+}
+function growNote() {
+  if (!noteOpen || snapMode !== 'extend' || !noteLocked || !noteTarget) return;
+  const e = clamp(Math.max(playPos, noteTarget[0] + MIN_EXT), 0, P.duration);
+  if (Math.abs(e - noteTarget[1]) < .02) return;
+  noteTarget[1] = e;
+  paintNoteHi();
 }
 
 function paintNote() {
@@ -3858,7 +3885,9 @@ function paintNote() {
   const n = String(noteTarget[2] + 1).padStart(2, '0');
   $('#nbSeg').textContent = snapMode === 'cut'
     ? 'at cut ' + n + ' · ' + fmt(noteTarget[0])
-    : 'section ' + n + ' · ' + fmt(noteTarget[0]) + '–' + fmt(noteTarget[1]);
+    : snapMode === 'extend'
+      ? (noteLocked ? 'holding · ' : 'starts at ') + fmt(noteTarget[0]) + '–' + fmt(noteTarget[1])
+      : 'section ' + n + ' · ' + fmt(noteTarget[0]) + '–' + fmt(noteTarget[1]);
   $('#nbSeg').style.color = noteLocked ? c : '';
 
   const hi = $('#seghi');
@@ -3911,8 +3940,9 @@ function setLive(on) {
 }
 $('#liveBtn').onclick = () => setLive(!liveMode);
 $('#nbSnap').onclick = () => {
-  snapMode = snapMode === 'section' ? 'cut' : 'section';
+  snapMode = SNAP_MODES[(SNAP_MODES.indexOf(snapMode) + 1) % SNAP_MODES.length];
   if (!noteLocked) noteTarget = targetNow();
+  else if (snapMode === 'extend') noteTarget = [noteTarget[0], Math.max(playPos, noteTarget[0] + MIN_EXT), noteTarget[2]];
   else { const sg = segAt(noteTarget[0] + .001); noteTarget = snapMode === 'cut'
       ? [sg[0], sg[0] + Math.min(Math.max(1.2, (sg[1] - sg[0]) * .18), sg[1] - sg[0]), sg[2]]
       : [sg[0], sg[1], sg[2]]; }
@@ -3920,7 +3950,13 @@ $('#nbSnap').onclick = () => {
 };
 $('#noteInput').addEventListener('input', () => {
   const v = $('#noteInput').value;
-  if (v && !noteLocked) { noteLocked = true; paintNote(); }
+  if (v && !noteLocked) {
+    noteLocked = true;
+    /* pin the start to the first keystroke — that is the moment the user
+       means, not whenever the console happened to open */
+    if (snapMode === 'extend') noteTarget = targetNow();
+    paintNote();
+  }
   if (!v && noteLocked) { noteLocked = false; noteTarget = targetNow(); paintNote(); }
 });
 
