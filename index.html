@@ -118,6 +118,19 @@ kbd{
 #liveBtn.key i{background:#1A1204;animation:blink 1.5s steps(2,end) infinite}
 @keyframes blink{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){#liveBtn.key i{animation:none}}
+/* Live notes only *are* live while the song is running. The dot used to
+   keep blinking through a pause, claiming to be recording against a
+   playhead that had stopped — so paused now looks paused, everywhere. */
+body.live-paused #liveBtn.key i{animation:none;opacity:.4}
+body.live-paused #liveBtn.key{box-shadow:none;background:rgba(232,201,155,.35);border-color:rgba(232,201,155,.5)}
+body.live-paused #notebar::before{background:rgba(232,201,155,.35)}
+body.live-paused #notebar{box-shadow:0 28px 70px rgba(0,0,0,.7)}
+.nb-paused{
+  display:none;font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--live);white-space:nowrap;
+}
+body.live-paused .nb-paused{display:inline}
+body.live-paused .nb-hint{display:none}
 
 /* live state: the whole instrument changes colour */
 body.live #playhead .beam{background:linear-gradient(180deg,#fff,var(--live) 16%,rgba(232,201,155,.2))}
@@ -762,6 +775,41 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #savedTag.on{opacity:1}
 @media (max-width:900px){#savedTag{display:none}}
 
+/* ── the youtube dock: the song, without loading a file ─ */
+#ytDock{
+  position:fixed;right:14px;bottom:14px;z-index:17;width:min(356px,64vw);display:none;
+  border-radius:12px;border:1px solid var(--line2);overflow:hidden;
+  background:linear-gradient(180deg,rgba(44,39,70,.97),rgba(30,27,48,.97));backdrop-filter:blur(20px);
+  box-shadow:0 22px 60px rgba(0,0,0,.6);
+}
+body.editing #ytDock.on{display:block}
+.yt-head{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 11px;border-bottom:1px solid var(--line)}
+.yt-lbl{font-family:var(--ui);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--play);flex:none}
+.yt-title{
+  font-family:var(--ui);font-size:11px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+}
+.yt-head button{
+  font-family:var(--ui);font-size:13px;color:var(--faint);width:26px;height:26px;border-radius:6px;flex:none;
+}
+.yt-head button:hover{color:var(--text);background:rgba(255,255,255,.07)}
+/* 16:9, and never under the 200px the embedded player is required to keep */
+.yt-box{aspect-ratio:16/9;background:#000}
+.yt-box iframe{display:block;width:100%;height:100%;border:0}
+#ytDock.folded .yt-box,#ytDock.folded .yt-form{display:none}
+#ytDock.live .yt-form{display:none}
+.yt-form{padding:11px}
+.yt-row{display:flex;gap:7px}
+.yt-row input{
+  flex:1;min-width:0;font-family:var(--ui);font-size:13px;padding:9px 10px;border-radius:8px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);
+}
+.yt-row input:focus{outline:none;border-color:var(--cut)}
+.yt-note{margin-top:8px;font-family:var(--ui);font-size:10px;line-height:1.5;color:var(--faint)}
+.yt-note.bad{color:var(--live)}
+#ytBtn.on{color:var(--play);border-color:rgba(217,143,196,.45)}
+@media (max-width:640px){#ytDock{right:8px;left:8px;bottom:8px;width:auto}}
+
 /* ── the login screen, on the build that has accounts ── */
 #auth{z-index:60;background:
   radial-gradient(90% 60% at 50% 0%, rgba(155,140,255,.20), transparent 62%),
@@ -1064,6 +1112,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="sceneBtn" title="Projects"><b id="sceneName">Project 1</b><span>▸</span></button>
     <button class="btn ghost" id="retakeBtn" title="Tap a second set of cuts — drum breaks, say — kept beside the first">+ Timeline</button>
     <span id="audioName"></span>
+    <button class="btn ghost" id="ytBtn" title="Play the song straight from YouTube — nothing to load">YouTube</button>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
     <div class="seg-ctl" id="zoomCtl">
@@ -1112,6 +1161,24 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 </div>
 
+<div id="ytDock">
+  <div class="yt-head">
+    <span class="yt-lbl">youtube</span>
+    <span class="yt-title" id="ytTitle">paste a link</span>
+    <span class="spacer"></span>
+    <button id="ytFold" title="Fold the player away">–</button>
+    <button id="ytOff" title="Detach this video from the project">✕</button>
+  </div>
+  <div class="yt-box" id="ytBox"></div>
+  <div class="yt-form" id="ytForm">
+    <div class="yt-row">
+      <input id="ytUrl" placeholder="paste a youtube link" spellcheck="false" autocomplete="off" autocapitalize="none">
+      <button class="btn key" id="ytGo">Use it</button>
+    </div>
+    <div class="yt-note" id="ytNote">The song plays from YouTube. Nothing is loaded, uploaded or stored — only the link travels with the project.</div>
+  </div>
+</div>
+
 <div id="notebar">
   <div class="nb-row">
     <span class="nb-lbl">into</span>
@@ -1124,6 +1191,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <input id="noteInput" placeholder="what just happened…" autocomplete="off">
     <button id="nbTab" title="Switch to next track">tab ⇥</button>
     <span class="nb-hint"><kbd>enter</kbd> place · <kbd>tab</kbd> track · <kbd>esc</kbd> stop</span>
+    <span class="nb-paused">paused · <kbd>space</kbd> to carry on</span>
   </div>
 </div>
 
@@ -1383,7 +1451,9 @@ const P = {
   overlay: false,
   duration: 60,
   audioName: '',
-  takeNum: 1
+  takeNum: 1,
+  ytId: '',               // the song plays from YouTube; only this id travels
+  ytTitle: ''
 };
 const curTL = () => P.timelines[P.activeTL] || P.timelines[0];
 function setMarks(arr) { const t = curTL(); if (t) t.marks = arr; P.markers = arr; }
@@ -2057,7 +2127,7 @@ function go(next) {
   if (next === 'home') paintHome();
   if (next === 'send') paintSend();
   if (next === 'library') renderScenes();
-  if (next === 'edit') { fit(); render(); }
+  if (next === 'edit') { fit(); render(); ytSync(); }
   if (next !== 'edit' && playing) stopPlay();
   if (next !== 'edit' && liveMode) setLive(false);
 }
@@ -2085,7 +2155,7 @@ function paintHome() {
 
 /* ═══ scenes ══════════════════════════════════════════ */
 let lib = { current: null, scenes: [] };   /* {id,name,updated,data} */
-const SCENE_KEYS = ['markers', 'timelines', 'activeTL', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum'];
+const SCENE_KEYS = ['markers', 'timelines', 'activeTL', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum', 'ytId', 'ytTitle'];
 const sceneData = () => { const o = {}; SCENE_KEYS.forEach(k => o[k] = P[k]); return o; };
 const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 
@@ -3513,14 +3583,255 @@ function frame(ts) {
   rafId = requestAnimationFrame(frame);
 }
 
+/* ═══ playing from YouTube ═════════════════════════════════════════════
+   Finding the mp3 was the step between having a song and marking it up,
+   and on a phone it often meant you simply could not. So the song can come
+   from YouTube instead: paste a link, the app hosts a small player and
+   drives it, and the transport reads the player's own clock rather than
+   counting frames. Cuts, seeking and live notes all land where they should.
+
+   Nothing is uploaded, downloaded or stored. Only the eleven-character
+   video id rides along in the project, so the other device opens the same
+   song without anyone sending anything.
+
+   No waveform is possible — the browser will not let one page read audio
+   out of another origin's player — so the ruler stays as it is without a
+   file. That is the trade for never loading anything. */
+const YT_PATTERNS = [
+  /(?:youtube\.com|youtube-nocookie\.com)\/watch\?(?:.*&)?v=([\w-]{11})/i,
+  /youtu\.be\/([\w-]{11})/i,
+  /(?:youtube\.com|youtube-nocookie\.com)\/(?:embed|v|shorts|live)\/([\w-]{11})/i,
+  /^([\w-]{11})$/
+];
+/* music.youtube.com links match the first pattern too — the host contains
+   youtube.com — which is the point: a link copied out of YouTube Music
+   plays the same track here. */
+function ytIdFrom(s) {
+  s = String(s || '').trim();
+  for (const re of YT_PATTERNS) { const m = re.exec(s); if (m) return m[1]; }
+  return '';
+}
+
+let yt = { id: '', player: null, ready: false, playing: false, dur: 0, t: 0, tAt: 0, err: '' };
+const hasYT = () => !!(yt.ready && yt.player);
+
+let ytApi = null;
+function ytLoadApi() {
+  if (ytApi) return ytApi;
+  ytApi = new Promise((res, rej) => {
+    if (window.YT && window.YT.Player) return res(window.YT);
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') prev(); res(window.YT); };
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => rej(new Error('could not reach YouTube'));
+    document.head.appendChild(s);
+    /* offline, or blocked — say so rather than leaving a dead panel */
+    setTimeout(() => { if (!(window.YT && window.YT.Player)) rej(new Error('YouTube did not load')); }, 15000);
+  });
+  return ytApi;
+}
+
+/* YT.Player replaces the element it is given, so every attach gets a fresh
+   one rather than trying to reuse a node that is now an iframe. */
+function ytTarget() {
+  const box = $('#ytBox'); box.innerHTML = '';
+  const d = el('div'); d.id = 'ytFrame';
+  box.appendChild(d);
+  return d;
+}
+
+function ytErrText(code) {
+  if (code === 2) return 'that link does not look like a video';
+  if (code === 5) return 'this video will not play in an embedded player';
+  if (code === 100) return 'that video is gone or private';
+  if (code === 101 || code === 150) return 'the owner does not allow this video to be played outside YouTube';
+  return 'YouTube refused that video (' + code + ')';
+}
+
+async function ytAttach(id, opts) {
+  opts = opts || {};
+  if (!id) return false;
+  yt.err = ''; ytPaint();
+  try {
+    const API = await ytLoadApi();
+    if (yt.player && yt.player.destroy) { try { yt.player.destroy(); } catch (e) {} }
+    yt.player = null; yt.ready = false; yt.playing = false; yt.id = id;
+    ytTarget();
+    yt.player = new API.Player('ytFrame', {
+      videoId: id,
+      playerVars: { controls: 1, rel: 0, modestbranding: 1, playsinline: 1, origin: location.origin },
+      events: {
+        onReady: () => ytOnReady(opts),
+        onStateChange: ytOnState,
+        onError: e => {
+          yt.err = ytErrText(e.data); yt.ready = false;
+          slog('err', 'youtube would not play that', yt.err);
+          ytPaint();
+        }
+      }
+    });
+    return true;
+  } catch (e) {
+    yt.err = String(e.message || e);
+    slog('err', 'could not start the YouTube player', yt.err);
+    ytPaint();
+    return false;
+  }
+}
+
+function ytOnReady(opts) {
+  yt.ready = true;
+  yt.dur = (yt.player.getDuration && yt.player.getDuration()) || 0;
+  yt.err = '';
+  const data = yt.player.getVideoData ? yt.player.getVideoData() : null;
+  const title = (data && data.title) || '';
+  P.ytId = yt.id;
+  if (title) P.ytTitle = title;
+  slog('ok', 'playing from youtube', title || yt.id);
+  ytAdoptDuration();
+  if (!opts.silent) { save(); toast(title ? 'ready — ' + title : 'ready to play'); }
+  paintAudioTag(); ytPaint(); updatePos();
+}
+
+/* The ruler has to agree with the song, or every cut sits in the wrong
+   section. Take the video's length — but never shorter than what has
+   already been tapped, which would push those cuts off the end. */
+function ytAdoptDuration() {
+  if (!yt.dur) return;
+  const was = P.duration;
+  recalc();                          /* now knows the video's length */
+  if (Math.abs(was - P.duration) < .5) return;
+  if (screen === 'edit') { fit(); render(); }
+  slog('info', 'timeline length taken from the video', fmt(was) + ' → ' + fmt(P.duration));
+}
+
+function ytOnState(e) {
+  const s = e.data;
+  if (s === 1) {                       /* playing */
+    yt.playing = true; ytSample();
+    /* pressing play on the player itself should start the app too, so the
+       two are never running against each other */
+    if (!playing && screen === 'edit') startPlay(true);
+  } else if (s === 2 || s === 0) {     /* paused, ended */
+    yt.playing = false;
+    if (playing) stopPlay(true);
+  }
+  ytPaint();
+}
+
+function ytSample() {
+  if (!hasYT() || !yt.player.getCurrentTime) return;
+  yt.t = yt.player.getCurrentTime() || 0;
+  yt.tAt = performance.now();
+}
+/* getCurrentTime only moves a few times a second, so a playhead driven
+   straight off it visibly steps. Run forward from the last change and
+   resync the moment a new value lands. */
+function ytTime() {
+  if (!hasYT() || !yt.player.getCurrentTime) return 0;
+  const raw = yt.player.getCurrentTime() || 0;
+  if (raw !== yt.t) { yt.t = raw; yt.tAt = performance.now(); return raw; }
+  if (!yt.playing) return raw;
+  return raw + (performance.now() - yt.tAt) / 1000;
+}
+
+function ytDetach(silent) {
+  if (yt.player && yt.player.destroy) { try { yt.player.destroy(); } catch (e) {} }
+  yt.player = null; yt.ready = false; yt.playing = false; yt.id = ''; yt.dur = 0; yt.err = '';
+  const box = $('#ytBox'); if (box) box.innerHTML = '';
+  if (!silent) {
+    P.ytId = ''; P.ytTitle = '';
+    save();
+    slog('info', 'detached the video', 'the cuts and notes are untouched');
+  }
+  paintAudioTag(); ytPaint(); updatePos();
+}
+
+function ytPaint() {
+  const dock = $('#ytDock'); if (!dock) return;
+  dock.classList.toggle('live', hasYT());
+  $('#ytTitle').textContent = yt.err ? yt.err
+    : hasYT() ? (P.ytTitle || yt.id)
+    : yt.id ? 'loading…' : 'paste a link';
+  const note = $('#ytNote');
+  note.classList.toggle('bad', !!yt.err);
+  if (yt.err) note.textContent = yt.err + ' — try another link, or load a file instead.';
+  else note.textContent = 'The song plays from YouTube. Nothing is loaded, uploaded or stored — only the link travels with the project.';
+  const b = $('#ytBtn'); if (b) b.classList.toggle('on', hasYT());
+}
+
+/* Opening a project should bring its video with it, and opening one
+   without a video should not leave the last one playing underneath. */
+function ytSync() {
+  const want = P.ytId || '';
+  if (want === yt.id && (!want || yt.player)) { ytPaint(); return; }
+  if (!want) return ytDetach(true);
+  $('#ytDock').classList.add('on');
+  ytAttach(want, { silent: true });
+}
+
+function ytOpen() {
+  const dock = $('#ytDock');
+  dock.classList.add('on'); dock.classList.remove('folded');
+  if (!hasYT()) { const u = $('#ytUrl'); if (u) { u.focus(); u.select(); } }
+  ytPaint();
+}
+$('#ytBtn').onclick = () => {
+  const dock = $('#ytDock');
+  if (dock.classList.contains('on') && !dock.classList.contains('folded')) dock.classList.remove('on');
+  else ytOpen();
+};
+$('#ytFold').onclick = () => $('#ytDock').classList.toggle('folded');
+$('#ytOff').onclick = () => { ytDetach(); $('#ytDock').classList.remove('on'); };
+$('#ytGo').onclick = () => {
+  const raw = $('#ytUrl').value;
+  const id = ytIdFrom(raw);
+  if (!id) {
+    yt.err = 'that is not a YouTube link';
+    slog('err', 'not a youtube link', String(raw).slice(0, 80));
+    return ytPaint();
+  }
+  $('#ytUrl').value = '';
+  ytAttach(id);
+};
+$('#ytUrl').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') $('#ytGo').click();
+});
+
 /* ═══ capture ═════════════════════════════════════════ */
 const audio = $('#audio');
 let retakeMode = false;
 
 const hasAudio = () => !!audio.src && !isNaN(audio.duration) && audio.duration > 0;
 
+/* ═══ where the sound comes from ═══════════════════════════════════════
+   The transport does not care. It asks for a clock and presses play; a
+   loaded file and a YouTube video answer the same four questions, so cut
+   jumping, live notes and the playhead never learned there was a choice.
+   Falling through both leaves tap-time, exactly as before. */
+const hasClock = () => hasYT() || hasAudio();
+const srcTime = () => hasYT() ? ytTime() : (hasAudio() ? audio.currentTime : 0);
+function srcPlay(t) {
+  if (hasYT()) {
+    if (t != null) { try { yt.player.seekTo(t, true); } catch (e) {} }
+    try { yt.player.playVideo(); } catch (e) {}
+    return;
+  }
+  if (hasAudio()) { if (t != null) audio.currentTime = t; audio.play().catch(() => {}); }
+}
+function srcPause() {
+  if (hasYT()) { try { yt.player.pauseVideo(); } catch (e) {} }
+  audio.pause();
+}
+function srcSeek(t) {
+  if (hasYT()) { try { yt.player.seekTo(t, true); ytSample(); } catch (e) {} return; }
+  if (hasAudio()) audio.currentTime = t;
+}
+
 function capTime() {
-  if (hasAudio()) return audio.currentTime;
+  if (hasClock()) return srcTime();
   return (performance.now() - recStart) / 1000;
 }
 
@@ -3536,13 +3847,13 @@ function startRec() {
   $('#stage').classList.add('rec');
   $('#idleHint').style.display = 'none';
   $('#liveFoot').style.display = 'flex';
-  if (hasAudio()) { audio.currentTime = 0; audio.play().catch(() => {}); }
+  if (hasClock()) srcPlay(0);
 }
 
 function endRec() {
   if (mode !== 'rec') return;
   const marks = liveMarks.slice().sort((a, b) => a - b);
-  audio.pause();
+  srcPause();
   $('#stage').classList.remove('rec');
   $('#liveFoot').style.display = 'none';
   const compact = isCompact();
@@ -3629,6 +3940,8 @@ function migrate(o) {
   /* hand back the SAME array the active timeline holds, so Object.assign(P, …)
      leaves P.markers and P.timelines[activeTL].marks pointing at one object */
   o.markers = o.timelines[o.activeTL].marks;
+  if (typeof o.ytId !== 'string') o.ytId = '';
+  if (typeof o.ytTitle !== 'string') o.ytTitle = '';
   return o;
 }
 migrate(P);
@@ -3693,9 +4006,14 @@ function segAt(t) {
   for (const sg of L) if (t >= sg[0] && t < sg[1]) return sg;
   return L[L.length - 1];
 }
+/* How long is the song? When something is actually playing it, it knows —
+   and that has to win, or the timeline stops at the last cut and the rest
+   of the track is unreachable. Without a source the last cut is still all
+   we have to go on, which is what tap-time has always done. */
+const mediaDuration = () => hasYT() ? (yt.dur || 0) : (hasAudio() ? audio.duration : 0);
 function recalc() {
   const last = P.markers.length ? P.markers[P.markers.length - 1] : 0;
-  P.duration = Math.max(last, 4);
+  P.duration = Math.max(last, mediaDuration(), 4);
 }
 function snap(t) {
   let best = t, d = 12 / pps();
@@ -4240,6 +4558,9 @@ addEventListener('drop', async e => {
 });
 
 async function loadAudio(f) {
+  /* a real file wins: it has a waveform, and two sources would fight over
+     the transport and the clock */
+  if (yt.id) { ytDetach(); $('#ytDock').classList.remove('on'); }
   audio.src = URL.createObjectURL(f);
   P.audioName = f.name;
   const sc0 = curScene();
@@ -4315,31 +4636,36 @@ $('#nextCut').onclick = () => {
 function togglePlay() {
   playing ? stopPlay() : startPlay();
 }
-function startPlay() {
+/* `fromSource` means the player itself started or stopped — reflect it,
+   but do not command it back or the two bounce off each other. */
+function startPlay(fromSource) {
   setPh(false);
   if (playPos >= P.duration - .05) playPos = 0;
-  if (hasAudio()) { audio.currentTime = playPos; audio.play().catch(() => {}); }
+  if (!fromSource && hasClock()) srcPlay(playPos);
   playing = true; lastPos = playPos;
   $('#playBtn').textContent = '❚❚'; $('#playBtn').classList.add('on');
   $('#playhead').classList.add('run');
+  paintLive();
 }
-function stopPlay() {
-  playing = false; audio.pause();
+function stopPlay(fromSource) {
+  playing = false;
+  if (fromSource) audio.pause(); else srcPause();
   if (!noteOpen) $('#seghi').classList.remove('on');
   $('#playBtn').textContent = '▶'; $('#playBtn').classList.remove('on');
   $('#playhead').classList.remove('run');
+  paintLive();
 }
 function seek(t) {
   setPh(false);
   playPos = clamp(t, 0, P.duration); lastPos = playPos;
-  if (hasAudio()) audio.currentTime = playPos;
+  if (hasClock()) srcSeek(playPos);
   updatePos();
 }
 
 /* called every frame while the editor is up */
 function advance(dt) {
   if (playing) {
-    playPos = hasAudio() ? audio.currentTime : playPos + dt;
+    playPos = hasClock() ? srcTime() : playPos + dt;
     if (playPos >= P.duration) { playPos = P.duration; stopPlay(); }
 
     /* every cut the playhead crosses sends a ripple through the background */
@@ -4376,6 +4702,8 @@ function advance(dt) {
 
 function paintAudioTag() {
   const tag = $('#audioName'); if (!tag) return;
+  /* a video is carrying the sound — the file prompt would only confuse */
+  if (hasYT()) { tag.className = ''; tag.textContent = ''; return; }
   if (hasAudio()) { tag.className = ''; tag.textContent = P.audioName || ''; return; }
   if (P.audioName) { tag.className = 'need'; tag.textContent = '↑ load ' + P.audioName; }
   else { tag.className = ''; tag.textContent = ''; }
@@ -4386,7 +4714,7 @@ function updatePos() {
   const ph = $('#playhead');
   if (ph) ph.style.left = t2x(playPos) + 'px';
   growNote();
-  $('#posLabel').textContent = fmt(playPos) + ' / ' + fmt(P.duration) + (hasAudio() ? '' : ' · tap-time');
+  $('#posLabel').textContent = fmt(playPos) + ' / ' + fmt(P.duration) + (hasClock() ? '' : ' · tap-time');
   for (const e of blockIndex) {
     const on = playing && playPos >= e.s && playPos < e.e;
     if (on !== e.on) { e.on = on; e.el.classList.toggle('live', on); }
@@ -4521,6 +4849,14 @@ function setLive(on) {
   document.body.classList.toggle('live', on);
   if (on) { openNote(''); if (!playing) startPlay(); }
   else { closeNote(); if (playing) stopPlay(); }
+  paintLive();
+}
+/* Live notes ride on the playhead, so they are only live while the song is
+   moving — and now that the song may be a video someone can pause in the
+   player itself, that can stop without the app being asked. Pausing holds
+   the note where it is rather than throwing it away; playing carries on. */
+function paintLive() {
+  document.body.classList.toggle('live-paused', liveMode && !playing);
 }
 $('#liveBtn').onclick = () => setLive(!liveMode);
 $('#nbSnap').onclick = () => {
