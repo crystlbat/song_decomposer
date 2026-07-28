@@ -770,6 +770,17 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
    silent either way, so nothing happening and the check having failed
    looked exactly alike — and a stale list you believe is current is the
    worse of the two. */
+/* Everything in one list meant your own work and the other device's were
+   indistinguishable until you read every badge. */
+.lib-filter{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
+.lib-filter button{
+  font-family:var(--ui);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);padding:8px 12px;border-right:1px solid var(--line);transition:.15s;
+}
+.lib-filter button:last-child{border-right:none}
+.lib-filter button:hover{color:var(--dim);background:rgba(255,255,255,.04)}
+.lib-filter button.on{color:var(--ink);background:var(--cut);font-weight:600}
+.lib-filter button[disabled]{opacity:.3;pointer-events:none}
 .lib-check{
   font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--faint);white-space:nowrap;transition:color .2s,opacity .3s;opacity:0;
@@ -1485,6 +1496,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <span class="lib-rule"></span>
     <span class="sc-title">projects</span>
     <span class="lib-check" id="libCheck"></span>
+    <div class="lib-filter" id="libFilter">
+      <button data-f="all" class="on">All</button>
+      <button data-f="theirs">Received</button>
+      <button data-f="mine">Created</button>
+    </div>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
     <button class="btn" id="syncSetup">Sync</button>
@@ -1701,6 +1717,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <span class="eyebrow" style="margin-bottom:0">inbox</span>
       <span class="spacer"></span>
       <button class="btn key" id="ibPull">Check for new work</button>
+      <button class="btn" id="ibGo">See them in Projects</button>
       <button class="btn ghost" id="ibReadAll">Mark all read</button>
       <button class="btn" id="ibClose">Close</button>
     </div>
@@ -1880,6 +1897,7 @@ $('#ibPull').onclick = () => {
   if (!srv.on) { closeInbox(); setupSync(); return toast('Connect your sync address first'); }
   syncPull();
 };
+$('#ibGo').onclick = () => { closeInbox(); go('library'); };
 $('#logPull').onclick = () => cloud.on ? cloudPull() : syncPull();
 $('#logPush').onclick = () => cloud.on ? cloudSave() : syncPush();
 $('#logCopy').onclick = () => {
@@ -2394,9 +2412,21 @@ function cutSpark(marks, dur, color) {
 function paintInbox() {
   const box = $('#ibList'); if (!box) return;
   const n = unreadCount();
+  /* "4 items need your attention" says nothing about what kind of attention.
+     New work and an edit to something you already have are different
+     errands, so count them separately. */
+  const un = inbox.filter(x => !x.read);
+  const fresh = un.filter(x => x.kind === 'new').length;
+  const edits = un.filter(x => x.kind === 'updated').length;
+  const clash = un.filter(x => x.kind === 'both').length;
+  const bits = [];
+  if (fresh) bits.push(fresh + (fresh === 1 ? ' project is new' : ' projects are new'));
+  if (edits) bits.push(edits + (edits === 1 ? ' has edits' : ' have edits'));
+  if (clash) bits.push(clash + (clash === 1 ? ' needs a look' : ' need a look'));
   $('#ibSub').textContent = !inbox.length
     ? 'Anything that arrives from your other device shows up here.'
-    : n ? n + (n === 1 ? ' item needs your attention.' : ' items need your attention.') : 'All caught up.';
+    : bits.length ? 'Sync complete — ' + bits.join(' · ') : 'All caught up.';
+  const goBtn = $('#ibGo'); if (goBtn) goBtn.style.display = inbox.length ? 'inline-block' : 'none';
   box.innerHTML = '';
   if (!inbox.length) {
     const e = el('div', 'ib-empty');
@@ -3762,10 +3792,26 @@ function cardSyncState(sc) {
   return { text: done ? 'sent' : 'not sent yet', pending: !done };
 }
 
+let libFilter = 'all';
+$('#libFilter').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  libFilter = b.dataset.f;
+  renderScenes();
+};
+
 function renderScenes() {
   const box = $('#scList'); if (!box) return;
   box.innerHTML = '';
-  visibleScenes().slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).forEach(sc => {
+  const all = visibleScenes();
+  const mine = all.filter(x => isMine(x.id)), theirs = all.filter(x => !isMine(x.id));
+  /* the filter is only worth showing once there is actually a mix */
+  const worth = mine.length && theirs.length;
+  $('#libFilter').style.display = worth ? 'flex' : 'none';
+  if (!worth) libFilter = 'all';
+  [...$('#libFilter').children].forEach(b => b.classList.toggle('on', b.dataset.f === libFilter));
+  const shown = libFilter === 'mine' ? mine : libFilter === 'theirs' ? theirs : all;
+
+  shown.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).forEach(sc => {
     const isCur = sc.id === lib.current;
     const card = el('div', 'sc-card' + (isCur ? ' cur' : ''));
 
