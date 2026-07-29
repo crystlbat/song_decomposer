@@ -5893,6 +5893,109 @@ $('#mCsv').onclick = () => {
   a.click();
   toast('csv saved — opens in excel or sheets');
 };
+
+$('#mMidi').onclick = () => {
+  const enc = new TextEncoder();
+  const writeVarLen = val => {
+    const buf = [val & 0x7F];
+    while (val >> 7) { val >>= 7; buf.unshift((val & 0x7F) | 0x80); }
+    return buf;
+  };
+  const trackChunk = events => {
+    let dataLen = 0; events.forEach(e => dataLen += e.length);
+    const buf = new Uint8Array(8 + dataLen);
+    buf.set([77, 84, 114, 107], 0);
+    buf[4] = (dataLen >> 24) & 0xff; buf[5] = (dataLen >> 16) & 0xff;
+    buf[6] = (dataLen >> 8) & 0xff; buf[7] = dataLen & 0xff;
+    let offset = 8;
+    events.forEach(e => { buf.set(e, offset); offset += e.length; });
+    return buf;
+  };
+  const metaText = (type, delta, text) => {
+    const tb = enc.encode(text);
+    const d = writeVarLen(delta), len = writeVarLen(tb.length);
+    const res = new Uint8Array(d.length + 2 + len.length + tb.length);
+    res.set(d, 0); res[d.length] = 0xff; res[d.length + 1] = type;
+    res.set(len, d.length + 2); res.set(tb, d.length + 2 + len.length);
+    return res;
+  };
+  const noteEvt = (isOff, delta, ch, note, vel) => {
+    const d = writeVarLen(delta);
+    const res = new Uint8Array(d.length + 3);
+    res.set(d, 0); res[d.length] = (isOff ? 0x80 : 0x90) | (ch & 0x0f);
+    res[d.length + 1] = note; res[d.length + 2] = vel;
+    return res;
+  };
+  const endTrack = delta => {
+    const d = writeVarLen(delta);
+    const res = new Uint8Array(d.length + 3);
+    res.set(d, 0); res.set([0xff, 0x2f, 0x00], d.length);
+    return res;
+  };
+  
+  const TPS = 960;
+  let t0 = [new Uint8Array([...writeVarLen(0), 0xff, 0x51, 0x03, 0x07, 0xa1, 0x20])];
+  let lastT = 0;
+  curTL().marks.forEach((m, i) => {
+    const t = Math.round(m * TPS), delta = t - lastT;
+    t0.push(metaText(0x06, delta, "Cut " + (i + 1)));
+    lastT = t;
+  });
+  t0.push(endTrack(0));
+  
+  const tracks = [trackChunk(t0)];
+  let ch = 0;
+  
+  P.layers.forEach(L => {
+    L.tracks.forEach(T => {
+      const blks = T.blocks.filter(k => k.tl ? k.tl === curTL().id : curTL() === P.timelines[0]);
+      if (!blks.length) return;
+      let evts = [metaText(0x03, 0, (P.layers.length > 1 ? L.name + ' - ' : '') + T.name)];
+      
+      let trackEvts = [];
+      blks.forEach(b => {
+        trackEvts.push({ tk: Math.round(b.s * TPS), on: true, txt: b.text });
+        trackEvts.push({ tk: Math.round(b.e * TPS), on: false });
+      });
+      trackEvts.sort((a, b) => a.tk - b.tk);
+      
+      let lastTk = 0;
+      trackEvts.forEach(e => {
+        const delta = Math.max(0, e.tk - lastTk);
+        if (e.on && e.txt) {
+           evts.push(metaText(0x01, delta, e.txt));
+           evts.push(noteEvt(false, 0, ch, 60, 100));
+        } else if (e.on) {
+           evts.push(noteEvt(false, delta, ch, 60, 100));
+        } else {
+           evts.push(noteEvt(true, delta, ch, 60, 0));
+        }
+        lastTk = e.tk;
+      });
+      evts.push(endTrack(0));
+      tracks.push(trackChunk(evts));
+      ch = (ch + 1) % 16;
+    });
+  });
+  
+  const trks = tracks.length;
+  const header = new Uint8Array([77, 84, 104, 100, 0, 0, 0, 6, 0, 1, (trks >> 8) & 0xff, trks & 0xff, (480 >> 8) & 0xff, 480 & 0xff]);
+  let totalLen = header.length;
+  tracks.forEach(t => totalLen += t.length);
+  const out = new Uint8Array(totalLen);
+  out.set(header, 0);
+  let off = header.length;
+  tracks.forEach(t => { out.set(t, off); off += t.length; });
+  
+  const blob = new Blob([out], { type: 'audio/midi' });
+  const a = el('a'); a.href = URL.createObjectURL(blob);
+  const sc = curScene();
+  a.download = ((sc && sc.name) || 'breakdown').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '-template.mid';
+  a.click();
+  toast('MIDI template saved');
+  $('#menu').classList.remove('open');
+};
+
 $('#mReset').onclick = () => { stopPlay(); if (liveMode) setLive(false); freshScene(); };
 
 /* ═══ boot ════════════════════════════════════════════ */
