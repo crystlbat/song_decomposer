@@ -1094,8 +1094,12 @@ body.cloud #spMainRow{display:flex}
 .sd-big{font-family:var(--mono);font-size:clamp(46px,17vw,72px);line-height:1;color:var(--text);font-weight:400}
 .sd-lbl{font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin-top:10px}
 .sd-len{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:14px}
-.sd-tls{display:none;flex-direction:column;gap:8px;margin-top:24px;align-items:center;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
-.sd-tls .tl-chip{width:100%;justify-content:center}
+.sd-tls{display:none;flex-direction:column;gap:16px;margin-top:24px;align-items:stretch;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.sd-tl-item{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:8px;background:rgba(0,0,0,.2);cursor:pointer;border:1px solid transparent;transition:border-color 0.2s}
+.sd-tl-item.on{border-color:var(--c);background:rgba(255,255,255,.03)}
+.sd-tl-head{display:flex;justify-content:space-between;font-family:var(--ui);font-size:12px;color:var(--text);letter-spacing:0.5px}
+.sd-tl-spark{position:relative;height:12px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden}
+.sd-tl-spark i{position:absolute;top:0;width:2px;height:100%;background:var(--c);opacity:0.8}
 .sd-name{
   width:100%;padding:14px 14px;border-radius:11px;border:1px solid var(--line2);
   background:rgba(0,0,0,.3);color:var(--text);font-family:var(--txt);font-size:16px;font-weight:600;
@@ -2265,6 +2269,40 @@ function paintSend() {
   btn.disabled = !cuts;
   btn.classList.remove('sent');
   paintSendSpark();
+  
+  const tlsBox = $('#sdTLs');
+  if (tlsBox) {
+    tlsBox.innerHTML = '';
+    if (P.timelines && P.timelines.length > 0) {
+      tlsBox.style.display = 'flex';
+      P.timelines.forEach((t, i) => {
+        const on = i === P.activeTL;
+        const item = el('div', 'sd-tl-item' + (on ? ' on' : ''));
+        item.style.setProperty('--c', t.color);
+        
+        const head = el('div', 'sd-tl-head');
+        const nm = el('span'); nm.textContent = t.name;
+        const cnt = el('b'); cnt.textContent = t.marks.length + ' cuts';
+        head.append(nm, cnt);
+        item.appendChild(head);
+        
+        const spark = el('div', 'sd-tl-spark');
+        const dur = P.duration || 1;
+        t.marks.forEach(m => {
+          const b = el('i');
+          b.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+          spark.appendChild(b);
+        });
+        item.appendChild(spark);
+        
+        item.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
+        tlsBox.appendChild(item);
+      });
+    } else {
+      tlsBox.style.display = 'none';
+    }
+  }
+
   const st = $('#sdState');
   st.className = 'sd-state';
   if (cloud.on) {
@@ -2282,24 +2320,6 @@ function paintSend() {
   st.textContent = srv.on
     ? (dirty ? 'not sent yet' : (srv.last ? 'last sent ' + fmtWhen(srv.last) : ''))
     : 'saved on this device';
-
-  const tlsBox = $('#sdTLs');
-  tlsBox.innerHTML = '';
-  if (P.timelines && P.timelines.length > 0) {
-    tlsBox.style.display = 'flex';
-    P.timelines.forEach((t, i) => {
-      const on = i === P.activeTL;
-      const chip = el('button', 'tl-chip' + (on ? ' on' : ''));
-      chip.style.setProperty('--c', t.color);
-      chip.appendChild(el('i'));
-      const sp = el('span'); sp.textContent = t.name; chip.appendChild(sp);
-      const n = el('b'); n.textContent = t.marks.length; chip.appendChild(n);
-      chip.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
-      tlsBox.appendChild(chip);
-    });
-  } else {
-    tlsBox.style.display = 'none';
-  }
 }
 $('#sdName').addEventListener('input', () => {
   const sc = curScene(); if (!sc) return;
