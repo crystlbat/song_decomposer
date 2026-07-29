@@ -31,6 +31,7 @@
   --mono:'Martian Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --txt:'Poppins', system-ui, -apple-system, sans-serif;
 
+  --barpad:16px;          /* the left inset every top bar shares */
   --lane-h:92px;
   --grp-h:32px;
   --ruler-h:104px;
@@ -117,6 +118,19 @@ kbd{
 #liveBtn.key i{background:#1A1204;animation:blink 1.5s steps(2,end) infinite}
 @keyframes blink{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){#liveBtn.key i{animation:none}}
+/* Live notes only *are* live while the song is running. The dot used to
+   keep blinking through a pause, claiming to be recording against a
+   playhead that had stopped — so paused now looks paused, everywhere. */
+body.live-paused #liveBtn.key i{animation:none;opacity:.4}
+body.live-paused #liveBtn.key{box-shadow:none;background:rgba(232,201,155,.35);border-color:rgba(232,201,155,.5)}
+body.live-paused #notebar::before{background:rgba(232,201,155,.35)}
+body.live-paused #notebar{box-shadow:0 28px 70px rgba(0,0,0,.7)}
+.nb-paused{
+  display:none;font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--live);white-space:nowrap;
+}
+body.live-paused .nb-paused{display:inline}
+body.live-paused .nb-hint{display:none}
 
 /* live state: the whole instrument changes colour */
 body.live #playhead .beam{background:linear-gradient(180deg,#fff,var(--live) 16%,rgba(232,201,155,.2))}
@@ -193,17 +207,24 @@ body:not(.editing) .drop .edit-only{display:none}
 #editor{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;opacity:0;transition:opacity .45s ease .1s}
 #editor.on{display:flex;opacity:1}
 #toolbar{
-  display:flex;align-items:center;gap:12px;height:var(--bar);padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:12px;height:var(--bar);padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(18px);
   background:linear-gradient(180deg, rgba(48,42,76,.72), rgba(30,27,48,.58));
+  /* The row is denser than a tablet is wide, and with nothing to shrink into
+     the last controls were quietly clipped off the right edge. Let it scroll
+     rather than squash the buttons or hide them: everything stays reachable
+     at any width, without a scrollbar drawn across the chrome. */
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;
 }
+#toolbar::-webkit-scrollbar{display:none}
+#toolbar > *:not(.spacer){flex:0 0 auto}
 #posLabel{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.02em}
 #audioName{
   font-family:var(--ui);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);
   max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 #tlbar{
-  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
   background:linear-gradient(180deg, rgba(44,39,70,.6), rgba(32,28,52,.42));
 }
@@ -227,7 +248,7 @@ body:not(.editing) .drop .edit-only{display:none}
 .tl-chip .x{color:var(--faint);font-size:14px;line-height:1;padding:0 2px}
 .tl-chip .x:hover{color:var(--play)}
 .tl-hint{font-family:var(--ui);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-@media (max-width:900px){.tl-hint{display:none}#tlbar{padding-left:12px;gap:8px}}
+@media (max-width:900px){.tl-hint{display:none}#tlbar{gap:8px}}
 @media (pointer:coarse){.tl-chip{height:38px;padding:0 14px}}
 
 /* the stacked view: every timeline you tapped, side by side, unmerged */
@@ -238,6 +259,14 @@ body:not(.editing) .drop .edit-only{display:none}
 .tl-row.on{background:color-mix(in srgb,var(--c) 13%,transparent)}
 .tl-row i{position:absolute;top:4px;bottom:4px;width:2px;margin-left:-1px;background:var(--c);border-radius:2px}
 .tl-row.on i{top:2px;bottom:2px;box-shadow:0 0 6px var(--c)}
+.tl-x{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:3;
+  font-size:14px;line-height:1;color:var(--faint);padding:2px 7px;border-radius:5px;
+  opacity:0;transition:.15s;cursor:pointer;
+}
+.tl-row:hover .tl-x{opacity:1}
+.tl-x:hover{color:var(--play);background:rgba(255,255,255,.08)}
+@media (pointer:coarse){.tl-x{opacity:.65;font-size:17px;padding:4px 9px}}
 .tl-row u{
   position:absolute;left:8px;top:50%;transform:translateY(-50%);text-decoration:none;z-index:2;
   font-family:var(--ui);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
@@ -245,7 +274,7 @@ body:not(.editing) .drop .edit-only{display:none}
 }
 .tl-row.on u{color:var(--text)}
 #layerbar{
-  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 16px;flex:none;
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 62px 0 var(--barpad);flex:none;
   border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
   background:linear-gradient(180deg, rgba(38,34,60,.55), rgba(28,25,45,.38));
 }
@@ -267,16 +296,23 @@ body:not(.editing) .drop .edit-only{display:none}
 #overlayBtn{font-size:9.5px}
 
 #tlwrap{
-  flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:150px;
+  flex:1;overflow-y:auto;overflow-x:hidden;
   background:
     radial-gradient(120% 70% at 50% 0%, rgba(155,140,255,.10), transparent 60%),
     linear-gradient(180deg, rgba(34,31,53,.52), rgba(23,21,38,.30));
 }
-.tl{display:flex;min-height:100%}
+/* the run-off room used to be padding on the scroller, which put it
+   outside .tl — so the track column's background stopped short of the
+   bottom and read as a panel floating above nothing */
+.tl{display:flex;min-height:100%;padding-bottom:150px;box-sizing:content-box}
+.side,.scroller{margin-bottom:-150px;padding-bottom:150px}
 .side{
   width:var(--side-w);flex:none;border-right:1px solid var(--line);position:relative;z-index:3;
   background:linear-gradient(180deg, rgba(40,35,64,.62), rgba(26,23,42,.42));backdrop-filter:blur(10px);
 }
+/* stands in for .tl-strip on the scroller side: without it every track
+   header sat above its own lane by the height of the timeline strip */
+.side-strip{border-bottom:1px solid var(--line);background:rgba(0,0,0,.16)}
 .side-top{height:var(--ruler-h);border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;padding:0 16px;gap:6px}
 .side-top .lbl{font-family:var(--ui);font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
 .side-top .val{font-family:var(--mono);font-size:22px;color:var(--text)}
@@ -344,7 +380,10 @@ body:not(.editing) .drop .edit-only{display:none}
   font-weight:600;letter-spacing:-.01em;padding:5px 3px;border-radius:4px;
 }
 .head input:hover{background:rgba(255,255,255,.05)}
-.head .x{opacity:0;font-size:15px;color:var(--faint);padding:3px 6px;transition:.15s}
+/* This was opacity:0 until you hovered the exact row, which meant the only
+   way to delete a track was to already know it was there. It is faint but
+   present now — visible enough to find, quiet enough to ignore. */
+.head .x{opacity:.42;font-size:15px;color:var(--faint);padding:3px 6px;transition:.15s}
 .head:hover .x{opacity:1}
 .head .x:hover{color:var(--play)}
 .addtrack{
@@ -458,10 +497,23 @@ body.live #notebar::before{content:'';position:absolute;left:0;right:0;top:0;hei
     linear-gradient(180deg, rgba(32,28,54,.80), rgba(21,19,36,.86));
 }
 .page.on{display:block}
-body.screen-home #top,body.screen-library #top{display:flex}
+body.screen-library #top{display:flex}
+/* Home carries its own mark inside the content now. The fixed bar sits at
+   z-index 6 under .page's 8, so here it was only ever a smudge showing
+   through frosted glass. */
+body.screen-home #top{display:none}
 body.screen-home .menu,body.screen-capture .menu{display:none}
 
-#home{position:relative;overflow:hidden}
+/* Home has to be able to scroll. body is a fixed app shell, so a screen that
+   turns its own overflow off has no second chance: on a laptop at 680px, in
+   landscape on a phone, on anything short, the tiles below the fold were
+   simply unreachable and the only way to see them was to zoom the browser
+   out. The waves stay clipped by their own container. */
+   The position:relative that used to be here was the whole bug: it undid
+   .page's fixed inset:0, so the screen had no height to overflow *within*
+   and simply grew until body clipped it. It never needed to be positioned —
+   .page is already a containing block for the waves. */
+#home{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .home-wave{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .home-wave .wl{position:absolute;left:0;width:200%;fill:none;stroke-width:2;stroke-linecap:round}
 .home-wave .wl1{top:12%;height:130px;stroke:var(--cut);opacity:.16;animation:waveScroll 52s linear infinite}
@@ -470,30 +522,138 @@ body.screen-home .menu,body.screen-capture .menu{display:none}
 @keyframes waveScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.home-wave .wl{animation:none}}
 
-.home-in{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:min(16vh,150px) 28px 60px}
+.home-in{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:min(13vh,120px) 28px 64px}
+
+/* the wordmark: the product in one glyph — a line you cut */
+.home-mark{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.hm-name{font-family:var(--ui);font-size:11px;font-weight:600;letter-spacing:.3em;color:var(--text)}
+.hm-dot{color:var(--faint);font-size:10px}
+.hm-line{width:56px;height:14px;flex:none;overflow:visible}
+.hm-line line{stroke:var(--line2);stroke-width:1.5}
+.hm-line circle{fill:var(--cut)}
+.hm-line circle:nth-of-type(1){animation:cutPulse 3.4s ease-in-out infinite}
+.hm-line circle:nth-of-type(2){animation:cutPulse 3.4s ease-in-out .5s infinite}
+.hm-line circle:nth-of-type(3){animation:cutPulse 3.4s ease-in-out 1s infinite}
+@keyframes cutPulse{0%,72%,100%{r:2;opacity:.45}80%{r:3.2;opacity:1}}
+.home-mark .eyebrow{margin-bottom:0}
+
 #home h1{
-  font-family:var(--txt);font-weight:800;font-size:clamp(32px,6vw,62px);letter-spacing:-.038em;
+  font-family:var(--txt);font-weight:800;font-size:clamp(32px,6vw,60px);letter-spacing:-.038em;
   line-height:1.02;margin:0 0 18px;
 }
-.home-lede{margin:0 0 34px;color:var(--dim);font-size:15px;line-height:1.62;max-width:46ch}
-.home-acts{display:flex;flex-direction:column;gap:9px;max-width:520px}
-.hero{
-  display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
-  padding:22px 24px;border-radius:14px;border:1px solid var(--line2);
-  background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-  transition:.2s;
+#home h1 em{
+  font-style:normal;
+  background:linear-gradient(94deg,var(--cut) 0%,var(--play) 52%,var(--live) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background-size:220% 100%;animation:hueDrift 14s ease-in-out infinite alternate;
 }
-.hero:hover{transform:translateY(-2px)}
-.hero b{font-family:var(--txt);font-size:19px;font-weight:600;letter-spacing:-.02em}
-.hc-kick{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--cut)}
-#hContinue #hContinueName{font-size:21px}
-#hContinue #hContinueStats{font-family:var(--mono);font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--dim)}
-.hero span{font-family:var(--ui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
-.hero:hover{border-color:var(--cut);background:rgba(143,166,255,.06)}
-.hero:hover span{color:var(--dim)}
-.hero.alt{border-color:var(--line);background:rgba(255,255,255,.015)}
-.hero.alt:hover{border-color:var(--line2);background:rgba(255,255,255,.05)}
-.home-foot{margin-top:36px;font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+@keyframes hueDrift{to{background-position:100% 0}}
+.home-lede{margin:0 0 30px;color:var(--dim);font-size:15px;line-height:1.62;max-width:46ch}
+
+/* ── the tiles ──────────────────────────────────────────
+   They used to be five identical slabs, so nothing said which was the way
+   in and nothing said what any of them were. Each one now has its own
+   accent, its own mark drawn from the app's own vocabulary — cuts on a
+   line — and its own weight in the grid. */
+.home-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.tile{
+  --accent:var(--cut);
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  padding:17px 18px;border-radius:15px;text-align:left;overflow:hidden;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.016));
+  transition:transform .22s cubic-bezier(.2,.7,.3,1),border-color .22s,background .22s,box-shadow .22s;
+  animation:tileRise .42s cubic-bezier(.2,.7,.3,1) backwards;
+}
+@keyframes tileRise{from{opacity:0;transform:translateY(12px)}}
+.tile:nth-child(1){animation-delay:.02s}
+.tile:nth-child(2){animation-delay:.06s}
+.tile:nth-child(3){animation-delay:.10s}
+.tile:nth-child(4){animation-delay:.13s}
+.tile:nth-child(5){animation-delay:.16s}
+/* a hairline of the tile's own colour, so the five read as five */
+.tile::before{
+  content:'';position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent 78%);
+  opacity:.5;transition:opacity .22s;
+}
+.tile:hover,.tile:focus-visible{
+  transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 55%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.02));
+  box-shadow:0 16px 40px rgba(0,0,0,.4),0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+.tile:hover::before{opacity:1}
+.tile b{font-family:var(--txt);font-size:17px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:7px}
+.tile > span{font-family:var(--ui);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);transition:color .22s}
+.tile:hover > span{color:var(--dim)}
+.t-ico{width:26px;height:26px;margin-bottom:5px;color:var(--accent);opacity:.85;transition:.22s}
+.tile:hover .t-ico{opacity:1;transform:translateY(-1px)}
+.t-ico line,.t-ico path,.t-ico rect{stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
+.t-ico circle.f,.t-ico rect.f{fill:currentColor;stroke:none}
+
+/* pick up where you left off — the wide one, and the only one that shows
+   you your own work rather than describing itself */
+#hContinue{
+  --accent:var(--cut);grid-column:1/-1;gap:3px;padding:19px 20px 17px;
+  background:linear-gradient(135deg,rgba(143,166,255,.13),rgba(255,255,255,.02) 62%);
+  border-color:rgba(143,166,255,.3);
+}
+#hContinue::before{opacity:.85}
+.t-kick{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--cut)}
+#hContinueName{font-family:var(--txt);font-size:23px;font-weight:600;letter-spacing:-.025em}
+#hContinueStats{font-family:var(--mono);font-size:10.5px;letter-spacing:0;text-transform:none;color:var(--dim)}
+/* the shape of the breakdown itself: every cut, where it falls */
+.t-spark{position:relative;height:26px;width:100%;margin-top:11px;border-radius:7px;overflow:hidden;background:rgba(0,0,0,.28)}
+.t-spark i{position:absolute;top:0;bottom:0;width:1.5px;margin-left:-.75px;background:var(--cut);opacity:.85;box-shadow:0 0 6px rgba(143,166,255,.5)}
+/* a light passes along the line the way a playhead would, slow enough to
+   read as breathing rather than loading */
+.t-spark::after{
+  content:'';position:absolute;top:0;bottom:0;width:2px;left:-2px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.85),transparent);
+  box-shadow:0 0 12px rgba(255,255,255,.5);opacity:.55;
+  animation:sweep 7s cubic-bezier(.5,0,.5,1) infinite;
+}
+@keyframes sweep{0%{left:-2px}70%,100%{left:calc(100% + 2px)}}
+.t-go{
+  position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid rgba(143,166,255,.4);color:var(--cut);font-size:11px;
+  background:rgba(143,166,255,.1);transition:.22s;
+}
+#hContinue:hover .t-go{background:var(--cut);color:var(--ink);border-color:var(--cut);transform:translateY(-50%) scale(1.07)}
+
+#hNew{--accent:var(--play);grid-column:1/-1;padding:15px 18px;background:linear-gradient(135deg,rgba(217,143,196,.1),rgba(255,255,255,.02) 58%);border-color:rgba(217,143,196,.24)}
+/* a wide tile with two lines in it is mostly empty, so the mark moves out
+   of the flow and becomes the thing filling that space */
+#hNew .t-ico{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:54px;height:54px;margin:0;opacity:.2}
+#hNew:hover .t-ico{opacity:.42;transform:translateY(-50%) scale(1.06)}
+#hScenes{--accent:var(--t3)}
+#hInbox{--accent:var(--live)}
+#hSync{--accent:var(--t5)}
+/* the inbox only shouts when something is actually in it */
+#hInbox.has{border-color:rgba(232,201,155,.45);background:linear-gradient(180deg,rgba(232,201,155,.1),rgba(255,255,255,.02))}
+
+.home-foot{margin-top:30px;font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+
+@media (max-width:640px){
+  .home-acts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #hSync{grid-column:1/-1;padding:15px 18px}
+  #hSync .t-ico{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:46px;height:46px;margin:0;opacity:.2}
+}
+@media (prefers-reduced-motion:reduce){
+  .tile,.hm-line circle,#home h1 em,.t-spark::after{animation:none}
+  .tile:hover{transform:none}
+}
+@media (max-height:860px){.home-in{padding-top:min(8vh,64px)}}
+@media (max-height:680px){
+  .home-in{padding-top:30px;padding-bottom:34px}
+  #home h1{font-size:clamp(24px,4.2vw,34px);margin-bottom:11px}
+  .home-lede{margin-bottom:18px;font-size:13.5px;line-height:1.5}
+  .tile{padding:12px 14px}
+  #hContinueName{font-size:19px}
+  .t-spark{height:20px;margin-top:8px}
+  .t-ico{width:20px;height:20px;margin-bottom:2px}
+  .home-foot{margin-top:18px}
+}
 
 #library{padding-bottom:80px}
 .lib-head{
@@ -606,6 +766,51 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 .sc-title{font-family:var(--ui);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--cut)}
 /* a hairline between the way out and the name of where you are, so the two
    stop reading as a pair of buttons jammed together */
+/* Opening this list checks for your other device's work. That check was
+   silent either way, so nothing happening and the check having failed
+   looked exactly alike — and a stale list you believe is current is the
+   worse of the two. */
+/* Saving is automatic, which is the point — but automatic and invisible
+   are not the same thing. This is the queue: what is still on its way up,
+   by name, and when the last one landed. */
+.save-lane{max-width:860px;margin:0 auto 4px;padding:12px 20px 0}
+.sl-head{display:flex;align-items:center;gap:9px}
+.sl-dot{width:8px;height:8px;border-radius:50%;background:var(--t3);flex:none;transition:.2s}
+.save-lane.pending .sl-dot{background:var(--live);animation:blink 1.1s steps(2,end) infinite}
+.save-lane.bad .sl-dot{background:var(--play)}
+@media (prefers-reduced-motion:reduce){.save-lane.pending .sl-dot{animation:none}}
+.sl-head b{font-family:var(--txt);font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.sl-when{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.sl-queue{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.sl-queue:empty{display:none}
+.sl-chip{
+  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;
+  border:1px solid rgba(232,201,155,.3);background:rgba(232,201,155,.08);
+  font-family:var(--ui);font-size:11px;color:var(--dim);max-width:220px;
+}
+.sl-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-chip i{width:5px;height:5px;border-radius:50%;background:var(--live);flex:none}
+@media (max-width:640px){.save-lane{padding:10px 14px 0}}
+
+/* Everything in one list meant your own work and the other device's were
+   indistinguishable until you read every badge. */
+.lib-filter{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
+.lib-filter button{
+  font-family:var(--ui);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);padding:8px 12px;border-right:1px solid var(--line);transition:.15s;
+}
+.lib-filter button:last-child{border-right:none}
+.lib-filter button:hover{color:var(--dim);background:rgba(255,255,255,.04)}
+.lib-filter button.on{color:var(--ink);background:var(--cut);font-weight:600}
+.lib-filter button[disabled]{opacity:.3;pointer-events:none}
+.lib-check{
+  font-family:var(--ui);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);white-space:nowrap;transition:color .2s,opacity .3s;opacity:0;
+}
+.lib-check.on{opacity:1}
+.lib-check.busy{color:var(--cut)}
+.lib-check.bad{color:var(--live);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.lib-check{display:none}}
 .lib-rule{width:1px;height:17px;background:var(--line2);flex:none}
 .sc-bar{display:flex;gap:7px;padding:16px 20px;flex-wrap:wrap}
 #scPasteWrap{display:none;padding:0 20px 14px;gap:8px;flex-direction:column}
@@ -733,6 +938,135 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 #savedTag.on{opacity:1}
 @media (max-width:900px){#savedTag{display:none}}
 
+/* ── choosing what to record, on a device with no editor ─
+   A phone only ever taps cuts, so the one thing it could not do was put
+   those cuts into a song it already has. */
+.pick-in{max-width:520px;margin:0 auto;padding:min(9vh,64px) 20px 48px}
+.pk-big{
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;text-align:left;
+  padding:20px;border-radius:14px;margin-top:6px;
+  border:1px solid rgba(217,143,196,.32);background:linear-gradient(135deg,rgba(217,143,196,.12),rgba(255,255,255,.02) 60%);
+  transition:.2s;
+}
+.pk-big:hover{border-color:var(--play);transform:translateY(-2px)}
+.pk-big b{font-family:var(--txt);font-size:19px;font-weight:600;letter-spacing:-.02em}
+.pk-big span{font-family:var(--ui);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+.pk-or{display:flex;align-items:center;gap:11px;margin:22px 0 12px}
+.pk-or i{flex:1;height:1px;background:var(--line)}
+.pk-or span{font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.pk-item{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;
+  border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);
+  margin-bottom:8px;transition:.16s;
+}
+.pk-item:hover{border-color:var(--cut);background:rgba(143,166,255,.07)}
+.pk-item .pk-main{flex:1;min-width:0}
+.pk-item b{display:block;font-family:var(--txt);font-size:15px;font-weight:600;letter-spacing:-.015em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-item span{font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+.pk-item .pk-add{
+  flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--line2);color:var(--dim);font-size:15px;
+}
+.pk-item:hover .pk-add{border-color:var(--cut);color:var(--cut)}
+.pk-none{font-family:var(--ui);font-size:12px;color:var(--faint);padding:6px 2px 2px}
+.pk-note{margin:18px 0 22px;font-size:12.5px;line-height:1.6;color:var(--faint)}
+/* which project the cuts are joining, on the hand-over screen */
+.sd-into{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--cut);margin-bottom:10px;display:none}
+body.into-tl .sd-into{display:block}
+
+/* ── the youtube dock: the song, without loading a file ─ */
+#ytDock{
+  position:fixed;right:14px;bottom:14px;z-index:17;width:min(356px,64vw);display:none;
+  border-radius:12px;border:1px solid var(--line2);overflow:hidden;
+  background:linear-gradient(180deg,rgba(44,39,70,.97),rgba(30,27,48,.97));backdrop-filter:blur(20px);
+  box-shadow:0 22px 60px rgba(0,0,0,.6);
+}
+body.editing #ytDock.on{display:block}
+.yt-head{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 11px;border-bottom:1px solid var(--line)}
+.yt-lbl{font-family:var(--ui);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--play);flex:none}
+.yt-title{
+  font-family:var(--ui);font-size:11px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+}
+.yt-head button{
+  font-family:var(--ui);font-size:13px;color:var(--faint);width:26px;height:26px;border-radius:6px;flex:none;
+}
+.yt-head button:hover{color:var(--text);background:rgba(255,255,255,.07)}
+/* 16:9, and never under the 200px the embedded player is required to keep */
+.yt-box{aspect-ratio:16/9;background:#000}
+.yt-box iframe{display:block;width:100%;height:100%;border:0}
+#ytDock.folded .yt-box,#ytDock.folded .yt-form{display:none}
+#ytDock.live .yt-form{display:none}
+.yt-form{padding:11px}
+.yt-row{display:flex;gap:7px}
+.yt-row input{
+  flex:1;min-width:0;font-family:var(--ui);font-size:13px;padding:9px 10px;border-radius:8px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);
+}
+.yt-row input:focus{outline:none;border-color:var(--cut)}
+.yt-note{margin-top:8px;font-family:var(--ui);font-size:10px;line-height:1.5;color:var(--faint)}
+.yt-note.bad{color:var(--live)}
+#ytBtn.on{color:var(--play);border-color:rgba(217,143,196,.45)}
+@media (max-width:640px){#ytDock{right:8px;left:8px;bottom:8px;width:auto}}
+
+/* ── picking a device when they have drifted apart ───── */
+/* a confirmation that reaches other devices has to sit above whatever is
+   already open, or it can be answered by a click meant for something else */
+#mainOf{z-index:50}
+.mo-in{max-width:460px;margin:0 auto;padding:min(11vh,90px) 22px 48px}
+.mo-in h1{font-size:clamp(24px,5vw,32px);font-weight:700;letter-spacing:-.03em;margin:0 0 10px}
+.mo-lede{margin:0 0 24px;font-size:14px;line-height:1.55;color:var(--dim)}
+.mo-cols{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.mo-col{
+  flex:1;text-align:center;padding:16px 10px;border-radius:12px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+}
+.mo-col b{display:block;font-family:var(--mono);font-size:26px;color:var(--text)}
+.mo-col span{font-family:var(--ui);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.mo-arrow{color:var(--faint);font-size:15px;flex:none}
+.mo-drop{margin-bottom:20px}
+.mo-drop-h{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--live);margin-bottom:8px}
+.mo-drop-i{
+  font-family:var(--txt);font-size:13.5px;color:var(--dim);padding:8px 11px;margin-bottom:5px;
+  border-radius:8px;border:1px solid rgba(232,201,155,.28);background:rgba(232,201,155,.07);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.mo-acts{display:flex;flex-direction:column;gap:9px}
+.mo-acts .btn{justify-content:center;text-align:center;padding:14px;min-height:46px}
+.mo-note{margin:20px 0 0;font-size:11.5px;line-height:1.6;color:var(--faint)}
+
+/* ── the login screen, on the build that has accounts ── */
+#auth{z-index:60;background:
+  radial-gradient(90% 60% at 50% 0%, rgba(155,140,255,.20), transparent 62%),
+  linear-gradient(180deg,#1B1E33 0%,#12131F 62%,#0E0F19 100%)}
+.au-in{max-width:400px;margin:0 auto;padding:min(12vh,110px) 22px 48px}
+.au-in h1{font-size:clamp(28px,5vw,38px);font-weight:700;letter-spacing:-.03em;margin:0 0 10px}
+.au-lede{margin:0 0 26px;font-size:14px;line-height:1.55;color:var(--dim)}
+.au-form{display:flex;flex-direction:column;gap:11px}
+.au-f{display:flex;flex-direction:column;gap:6px}
+.au-f span{font-family:var(--ui);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.au-f input{
+  font-family:var(--txt);font-size:16px;padding:13px 14px;border-radius:10px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--text);
+}
+.au-f input:focus{outline:none;border-color:var(--cut);background:rgba(143,166,255,.07)}
+.au-form .btn{justify-content:center;text-align:center;padding:14px;min-height:46px}
+.au-err{min-height:16px;font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.4}
+.au-err.bad{color:var(--live)}
+.au-foot{margin:26px 0 0;font-size:12px;line-height:1.6;color:var(--faint)}
+.au-foot button{
+  display:block;margin-top:9px;font-family:var(--ui);font-size:9px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line2);padding-bottom:2px;
+}
+.au-foot button:hover{color:var(--text)}
+/* the account build has no address to paste and no device to pair */
+body.cloud #sync{display:none}
+#spMainRow{display:none}
+body.cloud #spMainRow{display:flex}
+#spMain{color:var(--live)}
+#spMain:hover{color:var(--text)}
+
 /* ── pairing ────────────────────────────────────────── */
 .pair-in{max-width:520px;margin:0 auto;padding:min(8vh,56px) 22px 48px;text-align:center}
 .pr-qr{
@@ -760,6 +1094,12 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
 .sd-big{font-family:var(--mono);font-size:clamp(46px,17vw,72px);line-height:1;color:var(--text);font-weight:400}
 .sd-lbl{font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);margin-top:10px}
 .sd-len{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:14px}
+.sd-tls{display:none;flex-direction:column;gap:16px;margin-top:24px;align-items:stretch;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+.sd-tl-item{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:8px;background:rgba(0,0,0,.2);cursor:pointer;border:1px solid transparent;transition:border-color 0.2s}
+.sd-tl-item.on{border-color:var(--c);background:rgba(255,255,255,.03)}
+.sd-tl-head{display:flex;justify-content:space-between;font-family:var(--ui);font-size:12px;color:var(--text);letter-spacing:0.5px}
+.sd-tl-spark{position:relative;height:12px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden}
+.sd-tl-spark i{position:absolute;top:0;width:2px;height:100%;background:var(--c);opacity:0.8}
 .sd-name{
   width:100%;padding:14px 14px;border-radius:11px;border:1px solid var(--line2);
   background:rgba(0,0,0,.3);color:var(--text);font-family:var(--txt);font-size:16px;font-weight:600;
@@ -788,6 +1128,32 @@ body:not(.screen-capture) #capBack,#stage.rec #capBack{display:none}
   padding:10px 12px;border-radius:8px;border:1px solid transparent;
 }
 .sd-more button:hover{color:var(--dim);border-color:var(--line)}
+/* the take you just tapped, drawn — the screen used to be a number and two
+   buttons, which is a poor reward for having just played a whole song */
+.sd-spark{position:relative;height:30px;margin-top:18px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.32);border:1px solid var(--line)}
+.sd-spark i{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--cut);box-shadow:0 0 8px rgba(143,166,255,.6);
+  animation:cutIn .5s cubic-bezier(.2,.8,.3,1) backwards}
+@keyframes cutIn{from{opacity:0;transform:scaleY(.2)}}
+
+/* Saved used to mean the button changed colour and that was that: no next
+   step, on the one device where the next step is the whole point. */
+.sd-done{display:none;flex-direction:column;align-items:center;gap:10px;text-align:center}
+#send.done .sd-acts,#send.done .sd-more,#send.done .sd-state,#send.done .sd-name,#send.done .sd-into{display:none}
+#send.done .sd-done{display:flex}
+.sd-tick{width:54px;height:54px;margin-bottom:2px}
+.sd-tick svg{width:100%;height:100%;fill:none;stroke:var(--t3);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sd-tick circle{opacity:.35;stroke-dasharray:114;stroke-dashoffset:114;animation:tickRing .55s cubic-bezier(.2,.8,.3,1) forwards}
+.sd-tick path{stroke-dasharray:30;stroke-dashoffset:30;animation:tickMark .4s cubic-bezier(.2,.8,.3,1) .3s forwards}
+@keyframes tickRing{to{stroke-dashoffset:0}}
+@keyframes tickMark{to{stroke-dashoffset:0}}
+.sd-done b{font-family:var(--txt);font-size:22px;font-weight:600;letter-spacing:-.02em}
+.sd-done > span{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:8px}
+.sd-done .sd-btn{margin-top:0}
+.sd-btn.quiet{background:none;border-color:transparent;color:var(--faint);padding:12px}
+.sd-btn.quiet:hover{color:var(--dim)}
+@media (prefers-reduced-motion:reduce){
+  .sd-spark i,.sd-tick circle,.sd-tick path{animation:none;stroke-dashoffset:0}
+}
 body.screen-send #top{display:flex}
 
 /* ── inbox: what arrived, in plain language ─────────── */
@@ -803,6 +1169,10 @@ body.screen-send #top{display:flex}
 .ib-msg.unread .ib-dot{background:var(--cut);box-shadow:0 0 10px var(--cut)}
 .ib-main{flex:1;min-width:0}
 .ib-name{font-family:var(--txt);font-size:16px;font-weight:600;letter-spacing:-.012em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ib-times{
+  font-family:var(--mono);font-size:9px;color:var(--faint);border:1px solid var(--line);
+  border-radius:5px;padding:2px 5px;letter-spacing:0;
+}
 .ib-meta{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:5px}
 .ib-tag{
   font-family:var(--ui);font-size:8.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
@@ -907,9 +1277,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 @media (max-width:1180px){:root{--side-w:176px}}
 @media (max-width:900px){
-  :root{--side-w:158px;--ruler-h:96px}
+  :root{--side-w:158px;--ruler-h:96px;--barpad:12px}
   #audioName{display:none}
-  #toolbar,#layerbar{gap:8px;padding-left:12px}
+  #toolbar,#layerbar{gap:8px}
   .cap-idle h1{font-size:clamp(26px,6.4vw,44px)}
 }
 @media (max-height:560px){
@@ -921,6 +1291,20 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 }
 @media (max-width:760px){.nb-hint{display:none}}
 @media (max-width:640px){:root{--side-w:140px}.sub{display:none}#capUI{padding:16px}}
+/* On a phone the zoom buttons are the one cluster with a better gesture
+   behind it — pinch the timeline, or + and − on a keyboard. Dropping them
+   is what stops the toolbar needing to be scrolled on every session. */
+@media (max-width:700px){#zoomCtl{display:none}}
+/* viewport-fit=cover was set but never paid for: on a notched phone the
+   content ran under the rounded corners and the home indicator. */
+@supports (padding:env(safe-area-inset-left)){
+  .page{
+    padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #toolbar,#tlbar,#layerbar{padding-left:calc(var(--barpad) + env(safe-area-inset-left))}
+  #notebar{bottom:calc(20px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -947,6 +1331,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="mImport">Import project</button>
     <button id="mCopy">Copy as text</button>
     <button id="mCsv">Export .csv</button>
+    <button id="mMidi">Export Ableton (.als)</button>
     <hr>
     <button id="mCompact">Compact capture: off</button>
     <button id="mLogs">Technical log</button>
@@ -994,9 +1379,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="sceneBtn" title="Projects"><b id="sceneName">Project 1</b><span>▸</span></button>
     <button class="btn ghost" id="retakeBtn" title="Tap a second set of cuts — drum breaks, say — kept beside the first">+ Timeline</button>
     <span id="audioName"></span>
+    <button class="btn ghost" id="ytBtn" title="Play the song straight from YouTube — nothing to load">YouTube</button>
     <div class="spacer"></div>
     <button id="liveBtn" title="Play and write notes as it runs"><i></i>Live notes</button>
-    <div class="seg-ctl">
+    <div class="seg-ctl" id="zoomCtl">
       <button id="zoomOut" title="Zoom out">−</button>
       <button id="zoomFit" title="Fit to width">FIT</button>
       <button id="zoomIn" title="Zoom in">+</button>
@@ -1023,6 +1409,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
           <div class="lbl">cuts</div>
           <div class="val" id="cutCount">0</div>
         </div>
+        <div class="side-strip" id="sideStrip"></div>
         <div id="heads"></div>
         <button class="addtrack" id="addTrack">＋ Add track</button>
       </div>
@@ -1042,6 +1429,24 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 </div>
 
+<div id="ytDock">
+  <div class="yt-head">
+    <span class="yt-lbl">youtube</span>
+    <span class="yt-title" id="ytTitle">paste a link</span>
+    <span class="spacer"></span>
+    <button id="ytFold" title="Fold the player away">–</button>
+    <button id="ytOff" title="Detach this video from the project">✕</button>
+  </div>
+  <div class="yt-box" id="ytBox"></div>
+  <div class="yt-form" id="ytForm">
+    <div class="yt-row">
+      <input id="ytUrl" placeholder="paste a youtube link" spellcheck="false" autocomplete="off" autocapitalize="none">
+      <button class="btn key" id="ytGo">Use it</button>
+    </div>
+    <div class="yt-note" id="ytNote">The song plays from YouTube. Nothing is loaded, uploaded or stored — only the link travels with the project.</div>
+  </div>
+</div>
+
 <div id="notebar">
   <div class="nb-row">
     <span class="nb-lbl">into</span>
@@ -1054,6 +1459,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <input id="noteInput" placeholder="what just happened…" autocomplete="off">
     <button id="nbTab" title="Switch to next track">tab ⇥</button>
     <span class="nb-hint"><kbd>enter</kbd> place · <kbd>tab</kbd> track · <kbd>esc</kbd> stop</span>
+    <span class="nb-paused">paused · <kbd>space</kbd> to carry on</span>
   </div>
 </div>
 
@@ -1073,19 +1479,41 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     </svg>
   </div>
   <div class="home-in">
-    <span class="eyebrow" id="greet">good evening</span>
-    <h1>What are you<br>taking apart today?</h1>
+    <div class="home-mark">
+      <svg class="hm-line" viewBox="0 0 56 14" aria-hidden="true">
+        <line x1="1" y1="7" x2="55" y2="7"/>
+        <circle cx="14" cy="7" r="2"/><circle cx="29" cy="7" r="2"/><circle cx="44" cy="7" r="2"/>
+      </svg>
+      <span class="hm-name">TAPLINE</span>
+      <span class="hm-dot">·</span>
+      <span class="eyebrow" id="greet">good evening</span>
+    </div>
+    <h1>What are you<br><em>taking apart</em> today?</h1>
     <p class="home-lede">Play it once. Mark where it turns. Build the breakdown as you listen — no DAW, no timeline to fight.</p>
     <div class="home-acts">
-      <button class="hero" id="hContinue">
-        <span class="hc-kick">pick up where you left off</span>
+      <button class="tile" id="hContinue">
+        <span class="t-kick">pick up where you left off</span>
         <b id="hContinueName">—</b>
         <span id="hContinueStats">—</span>
+        <div class="t-spark" id="hSpark" aria-hidden="true"></div>
+        <span class="t-go" aria-hidden="true">▶</span>
       </button>
-      <button class="hero alt" id="hNew"><b>New breakdown</b><span>tap the cuts from scratch</span></button>
-      <button class="hero alt" id="hScenes"><b>Projects</b><span id="hScenesCount">—</span></button>
-      <button class="hero alt" id="hInbox"><b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span></button>
-      <button class="hero alt" id="hSync"><b>Sync<span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span></button>
+      <button class="tile" id="hNew">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><circle class="f" cx="12" cy="12" r="2.6"/><path d="M6.6 12a5.4 5.4 0 0 1 5.4-5.4"/><path d="M3 12a9 9 0 0 1 9-9"/><path d="M17.4 12a5.4 5.4 0 0 1-5.4 5.4"/><path d="M21 12a9 9 0 0 1-9 9"/></svg>
+        <b>New breakdown</b><span>tap the cuts from scratch</span>
+      </button>
+      <button class="tile" id="hScenes">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/><circle class="f" cx="9" cy="6" r="1.9"/><circle class="f" cx="15" cy="12" r="1.9"/><circle class="f" cx="7" cy="18" r="1.9"/></svg>
+        <b>Projects</b><span id="hScenesCount">—</span>
+      </button>
+      <button class="tile" id="hInbox">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9.5l4 4 4-4"/><line x1="3.5" y1="18.5" x2="20.5" y2="18.5"/></svg>
+        <b>Inbox<span class="ib-badge" id="hInboxBadge" style="display:none">0</span></b><span id="hInboxSub">check for work from your other device</span>
+      </button>
+      <button class="tile" id="hSync">
+        <svg class="t-ico" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><circle class="f" cx="12" cy="12" r="3.2"/></svg>
+        <b><span id="hSyncTitle">Sync</span><span class="ib-badge" id="hSyncBadge" style="display:none">!</span></b><span id="hSyncSub">send and get work</span>
+      </button>
     </div>
     <div class="home-foot"><span id="hStore">stored on this device</span></div>
   </div>
@@ -1096,6 +1524,12 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button class="btn ghost" id="libBack">← home</button>
     <span class="lib-rule"></span>
     <span class="sc-title">projects</span>
+    <span class="lib-check" id="libCheck"></span>
+    <div class="lib-filter" id="libFilter">
+      <button data-f="all" class="on">All</button>
+      <button data-f="theirs">Received</button>
+      <button data-f="mine">Created</button>
+    </div>
     <span class="spacer"></span>
     <button class="btn" id="libInbox">Inbox<span class="ib-badge" id="libInboxBadge" style="display:none">0</span></button>
     <button class="btn" id="syncSetup">Sync</button>
@@ -1110,6 +1544,15 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <div id="scPasteWrap">
     <textarea id="scPaste" placeholder="paste an exported project here" spellcheck="false"></textarea>
     <button class="btn key" id="scPasteGo">Load pasted project</button>
+  </div>
+  <div class="save-lane" id="saveLane">
+    <div class="sl-head">
+      <span class="sl-dot" id="slDot"></span>
+      <b id="slTitle">All saved</b>
+      <span class="spacer"></span>
+      <span class="sl-when" id="slWhen"></span>
+    </div>
+    <div class="sl-queue" id="slQueue"></div>
   </div>
   <div id="scList"></div>
   <p class="sc-foot">Audio isn't carried in a project — cuts, layers, tracks and notes are. Load the same track on the other device and everything lines up.</p>
@@ -1143,6 +1586,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button id="spPair">Pair a device</button>
     <span class="spacer" style="flex:1"></span>
     <button id="spLog">Technical log</button>
+  </div>
+  <div class="sp-foot" id="spMainRow">
+    <button id="spMain">Devices disagree? Use this one</button>
   </div>
 </div>
 
@@ -1199,6 +1645,48 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 </div>
 
+<div id="mainOf" class="page">
+  <div class="mo-in">
+    <span class="eyebrow">make this the one</span>
+    <h1>Use these projects everywhere?</h1>
+    <p class="mo-lede" id="moLede">Checking what your other devices have…</p>
+    <div class="mo-cols">
+      <div class="mo-col"><b id="moHere">—</b><span>here</span></div>
+      <div class="mo-arrow">→</div>
+      <div class="mo-col"><b id="moThere">—</b><span>on the account</span></div>
+    </div>
+    <div class="mo-drop" id="moDrop"></div>
+    <div class="mo-acts">
+      <button class="btn key" id="moGo" disabled>Use this device's projects</button>
+      <button class="btn ghost" id="moCancel">Leave everything as it is</button>
+    </div>
+    <p class="mo-note">Nothing is destroyed. Anything removed is tombstoned on the server, not erased, and this device keeps its own rolling backups.</p>
+  </div>
+</div>
+
+<div id="auth" class="page">
+  <div class="au-in">
+    <span class="eyebrow">tapline</span>
+    <h1 id="auTitle">Sign in</h1>
+    <p class="au-lede" id="auLede">Sign in on every device you use. Your projects follow, and saving happens on its own.</p>
+    <div class="au-form">
+      <label class="au-f"><span>username</span>
+        <input id="auUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      </label>
+      <label class="au-f"><span>password</span>
+        <input id="auPass" type="password" autocomplete="current-password">
+      </label>
+      <div class="au-err" id="auErr"></div>
+      <button class="btn key" id="auGo">Sign in</button>
+      <button class="btn ghost" id="auSwap">I don't have an account yet</button>
+    </div>
+    <p class="au-foot">
+      No email, no verification — a name and a password you remember.
+      <button id="auLocal">Just work on this device</button>
+    </p>
+  </div>
+</div>
+
 <div id="pair" class="page">
   <div class="pair-in">
     <span class="eyebrow">pair a device</span>
@@ -1214,6 +1702,20 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   </div>
 </div>
 
+<div id="pick" class="page">
+  <div class="pick-in">
+    <span class="eyebrow">01 — what are you recording?</span>
+    <button class="pk-big" id="pkNew">
+      <b>A new project</b>
+      <span>a song you have not marked up yet</span>
+    </button>
+    <div class="pk-or"><i></i><span>or add a timeline to</span><i></i></div>
+    <div id="pkList"></div>
+    <p class="pk-note">A second timeline sits beside the first — song sections in one, drum breaks in another — on the same song.</p>
+    <button class="btn ghost" id="pkBack">← home</button>
+  </div>
+</div>
+
 <div id="send" class="page">
   <div class="send-in">
     <span class="eyebrow">02 — hand it over</span>
@@ -1221,7 +1723,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <div class="sd-big" id="sdCount">0</div>
       <div class="sd-lbl">cuts captured</div>
       <div class="sd-len" id="sdLen">—</div>
+      <div class="sd-spark" id="sdSpark" aria-hidden="true"></div>
+      <div id="sdTLs" class="sd-tls"></div>
     </div>
+    <div class="sd-into" id="sdInto">—</div>
     <input id="sdName" class="sd-name" placeholder="name this one…" autocomplete="off">
     <div class="sd-acts">
       <button class="sd-btn go" id="sdSend">Send</button>
@@ -1232,6 +1737,16 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <button id="sdEditor">Open full editor</button>
       <button id="sdHome">Home</button>
     </div>
+    <div class="sd-done" id="sdDone">
+      <div class="sd-tick" aria-hidden="true">
+        <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18"/><path d="M12 20.5l5.5 5.5L28 15"/></svg>
+      </div>
+      <b id="sdDoneMsg">Saved</b>
+      <span id="sdDoneSub">—</span>
+      <button class="sd-btn go" id="sdMore">Record one more take</button>
+      <button class="sd-btn" id="sdOpen">Open the breakdown</button>
+      <button class="sd-btn quiet" id="sdDoneHome">Done for now</button>
+    </div>
   </div>
 </div>
 
@@ -1241,6 +1756,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
       <span class="eyebrow" style="margin-bottom:0">inbox</span>
       <span class="spacer"></span>
       <button class="btn key" id="ibPull">Check for new work</button>
+      <button class="btn" id="ibGo">See them in Projects</button>
       <button class="btn ghost" id="ibReadAll">Mark all read</button>
       <button class="btn" id="ibClose">Close</button>
     </div>
@@ -1290,7 +1806,9 @@ const P = {
   overlay: false,
   duration: 60,
   audioName: '',
-  takeNum: 1
+  takeNum: 1,
+  ytId: '',               // the song plays from YouTube; only this id travels
+  ytTitle: ''
 };
 const curTL = () => P.timelines[P.activeTL] || P.timelines[0];
 function setMarks(arr) { const t = curTL(); if (t) t.marks = arr; P.markers = arr; }
@@ -1413,9 +1931,14 @@ function openLogs() { $('#logs').classList.add('on'); paintLogs(); }
 $('#logsClose').onclick = () => $('#logs').classList.remove('on');
 $('#logs').onclick = e => { if (e.target.id === 'logs') $('#logs').classList.remove('on'); };
 $('#logClear').onclick = () => { logs = []; try { localStorage.removeItem(LOGKEY); } catch (e) {} paintLogs(); };
-$('#ibPull').onclick = () => { if (!srv.on) { closeInbox(); setupSync(); return toast('Connect your sync address first'); } syncPull(); };
-$('#logPull').onclick = () => syncPull();
-$('#logPush').onclick = () => syncPush();
+$('#ibPull').onclick = () => {
+  if (cloud.on) { if (!cloud.user) { closeInbox(); return setupSync(); } return cloudPull(); }
+  if (!srv.on) { closeInbox(); setupSync(); return toast('Connect your sync address first'); }
+  syncPull();
+};
+$('#ibGo').onclick = () => { closeInbox(); go('library'); };
+$('#logPull').onclick = () => cloud.on ? cloudPull() : syncPull();
+$('#logPush').onclick = () => cloud.on ? cloudSave() : syncPush();
 $('#logCopy').onclick = () => {
   const txt = logs.map(r => logStamp(r.ts) + '  ' + (r.kind || 'info').toUpperCase() + '  ' + r.msg + (r.extra ? ' — ' + r.extra : '')).join('\n');
   navigator.clipboard.writeText(txt || 'empty').then(() => toast('log copied'), () => toast('copy blocked by the browser'));
@@ -1687,42 +2210,188 @@ function paintCompactMenu() {
   b.textContent = isCompact() ? 'Compact capture: on' : 'Compact capture: off';
 }
 
-function paintSend() {
+/* The cuts that just went in, drawn where the eye already is. */
+function paintSendSpark() {
+  const box = $('#sdSpark'); if (!box) return;
+  box.innerHTML = '';
+  const marks = (recKind === 'timeline' && recTL ? recTL.marks : P.markers) || [];
+  const dur = P.duration || 0;
+  if (marks.length < 2 || !dur) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  marks.forEach((m, i) => {
+    const b = el('i');
+    b.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+    b.style.animationDelay = Math.min(i * 40, 700) + 'ms';
+    box.appendChild(b);
+  });
+}
+
+/* Says what the check on opening Projects actually did. A failure has to
+   be visible here: the account indicator only ever talks about saving, so
+   "not saved" is no way to learn that the list you are reading is stale. */
+function paintLibCheck(state, detail) {
+  const e = $('#libCheck'); if (!e) return;
+  e.className = 'lib-check' + (state ? ' on' : '') + (state === 'busy' ? ' busy' : '') + (state === 'bad' ? ' bad' : '');
+  e.textContent = state === 'busy' ? 'checking…'
+    : state === 'bad' ? "couldn't check · retry"
+    : state === 'ok' ? (detail || 'up to date')
+    : '';
+  e.onclick = state === 'bad' ? () => checkOnOpen(true) : null;
+}
+
+async function checkOnOpen(force) {
+  if (!cloud.on || !cloud.user || cloud.busy) return;
+  if (!force && Date.now() - cloud.lastPull < 10000) return paintLibCheck('ok', 'checked just now');
+  paintLibCheck('busy');
+  const before = lib.scenes.length;
+  const got = await cloudPull(true);
+  if (!got) return paintLibCheck('bad');
+  const gained = lib.scenes.length - before;
+  paintLibCheck('ok', gained > 0 ? gained + (gained === 1 ? ' new project' : ' new projects') : 'up to date');
+  /* it has said its piece — do not leave a stale line sitting there */
+  setTimeout(() => { if (screen === 'library') paintLibCheck(''); }, 4000);
+}
+
+function paintSend(isSyncRefresh = false) {
+  if (isSyncRefresh && $('#send').classList.contains('done')) return;
+  $('#send').classList.remove('done');
   const cuts = (P.markers || []).length;
   $('#sdCount').textContent = cuts;
   $('#sdLen').textContent = cuts ? 'about ' + fmt(P.duration) + ' long' : 'nothing captured yet';
   const sc = curScene();
-  $('#sdName').value = sc ? sc.name : '';
+  const tl = recKind === 'timeline' && recTL;
+  document.body.classList.toggle('into-tl', !!tl);
+  const expectedName = tl ? recTL.name : (sc ? sc.name : '');
+  if (document.activeElement !== $('#sdName')) {
+    $('#sdName').value = expectedName;
+  }
+  $('#sdName').placeholder = tl ? 'name this timeline…' : 'name this one…';
+  $('#sdInto').textContent = tl && sc ? 'going into ' + sc.name : '';
+  const acts = document.querySelector('#send .sd-acts');
+  if (acts) acts.style.display = tl ? 'flex' : 'none';
+  const eb = $('#send .eyebrow');
+  if (eb) {
+    eb.textContent = tl ? '02 — name this timeline' : '02 — hand it over';
+    eb.style.display = tl ? 'block' : 'none';
+  }
   const btn = $('#sdSend');
+  btn.style.display = 'block';
   btn.disabled = !cuts;
   btn.classList.remove('sent');
-  btn.textContent = srv.on ? 'Send' : 'Connect sync to send';
+  paintSendSpark();
+  
+  const tlsBox = $('#sdTLs');
+  if (tlsBox) {
+    if (P.timelines && P.timelines.length > 0) {
+      tlsBox.style.display = 'flex';
+      if (tlsBox.children.length === P.timelines.length) {
+        Array.from(tlsBox.children).forEach((item, i) => {
+          item.className = 'sd-tl-item' + (i === P.activeTL ? ' on' : '');
+        });
+      } else {
+        tlsBox.innerHTML = '';
+        P.timelines.forEach((t, i) => {
+          const on = i === P.activeTL;
+          const item = el('div', 'sd-tl-item' + (on ? ' on' : ''));
+          item.style.setProperty('--c', t.color);
+          
+          const head = el('div', 'sd-tl-head');
+          const nm = el('span'); nm.textContent = t.name;
+          const cnt = el('b'); cnt.textContent = t.marks.length + ' cuts';
+          head.append(nm, cnt);
+          item.appendChild(head);
+          
+          const spark = el('div', 'sd-tl-spark');
+          const dur = P.duration || 1;
+          t.marks.forEach(m => {
+            const b = el('i');
+            b.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+            spark.appendChild(b);
+          });
+          item.appendChild(spark);
+          
+          item.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
+          tlsBox.appendChild(item);
+        });
+      }
+    } else {
+      tlsBox.style.display = 'none';
+    }
+  }
+
   const st = $('#sdState');
   st.className = 'sd-state';
+  if (cloud.on) {
+    /* nothing to hand over on this build — the cuts are already on their way,
+       so the button is only here for the reassurance of pressing it */
+    btn.textContent = cloud.user ? 'Save now' : 'Sign in to save';
+    st.textContent = !cloud.user ? 'saved on this device only'
+      : cloud.err ? cloud.err
+      : dirty ? 'saving…'
+      : cloud.last ? 'saved ' + fmtWhen(cloud.last) : 'saved';
+    if (cloud.user && !cloud.err && !dirty) {
+      st.className = 'sd-state ok';
+      btn.style.display = 'none';
+    }
+    return;
+  }
+  btn.textContent = srv.on ? 'Send' : 'Connect sync to send';
   st.textContent = srv.on
     ? (dirty ? 'not sent yet' : (srv.last ? 'last sent ' + fmtWhen(srv.last) : ''))
     : 'saved on this device';
+  if (srv.on && !dirty && srv.last) {
+    btn.style.display = 'none';
+    st.className = 'sd-state ok';
+  }
 }
 $('#sdName').addEventListener('input', () => {
   const sc = curScene(); if (!sc) return;
   const v = $('#sdName').value.trim();
-  if (v && v !== sc.name) { sc.name = v; sc.updated = Date.now(); store.set(LIBKEY, lib); paintSceneName(); syncSoon(); }
+  if (!v) return;
+  /* after a second pass the box is naming the timeline that just went in —
+     renaming the whole project there would be the wrong thing entirely */
+  if (recKind === 'timeline' && recTL) {
+    if (v === recTL.name) return;
+    recTL.name = v; sc.updated = Date.now();
+    commitP(sc, false); store.set(LIBKEY, lib); syncSoon();
+    return;
+  }
+  if (v !== sc.name) { sc.name = v; sc.updated = Date.now(); store.set(LIBKEY, lib); paintSceneName(); syncSoon(); }
 });
 $('#sdName').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#sdName').blur(); });
 $('#sdSend').onclick = async () => {
-  if (!srv.on) { setupSync(); return; }
+  if (cloud.on && !cloud.user) return setupSync();
+  if (!cloud.on && !srv.on) { setupSync(); return; }
   const st = $('#sdState'), btn = $('#sdSend');
-  st.className = 'sd-state'; st.textContent = 'sending…';
+  st.className = 'sd-state'; st.textContent = cloud.on ? 'saving…' : 'sending…';
   btn.disabled = true;
-  const ok = await syncPush();
+  const ok = cloud.on ? await cloudSave({ quiet: true }) : await syncPush();
   btn.disabled = false;
-  if (ok) {
-    btn.classList.add('sent'); btn.textContent = 'Sent ✓';
-    st.className = 'sd-state ok'; st.textContent = (P.markers || []).length + ' cuts are on your other devices';
-  } else {
-    st.className = 'sd-state err'; st.textContent = lastErr || 'send failed — see the sync log';
+  if (ok) sendDone();
+  else {
+    st.className = 'sd-state err'; st.textContent = (cloud.on ? cloud.err : lastErr) || 'that did not go through — see the technical log';
   }
 };
+
+/* Saved is not the end of anything — on a phone it is the moment you are
+   most likely to want another pass. Say what landed, then offer the loop
+   first and the way out after it, rather than leaving the screen sitting
+   there with a green button and nowhere to go. */
+function sendDone() {
+  const sc = curScene();
+  const tl = recKind === 'timeline' && recTL;
+  const cuts = ((tl ? recTL.marks : P.markers) || []).length;
+  $('#sdDoneMsg').textContent = tl ? 'Timeline saved' : 'Take saved';
+  $('#sdDoneSub').textContent = tl
+    ? '"' + recTL.name + '" · ' + cuts + ' cuts · in ' + (sc ? sc.name : 'this project')
+    : (sc ? sc.name : 'this project') + ' · ' + cuts + ' cuts';
+  $('#sdMore').textContent = sc ? 'Record one more take' : 'Record another';
+  const eb = $('#send .eyebrow'); if (eb) eb.textContent = '03 — that one is safe';
+  $('#send').classList.add('done');
+}
+$('#sdMore').onclick = () => { $('#send').classList.remove('done'); startRetake(); };
+$('#sdOpen').onclick = () => go('edit');
+$('#sdDoneHome').onclick = () => go('home');
 $('#sdAgain').onclick = () => startRetake();
 $('#sdEditor').onclick = () => go('edit');
 $('#sdHome').onclick = () => go('home');
@@ -1754,9 +2423,48 @@ try { const raw = localStorage.getItem(INBOXKEY); if (raw) inbox = JSON.parse(ra
 const saveInbox = () => { try { localStorage.setItem(INBOXKEY, JSON.stringify(inbox)); } catch (e) {} };
 const unreadCount = () => inbox.filter(m => !m.read).length;
 
+/* One row per project. Syncing the same project after three edits used to
+   leave three rows all saying the same thing, and the one arrival that
+   actually needed a decision was buried under them. A repeat arrival now
+   updates the row that is already there rather than stacking on top of it.
+
+   Conflicts are the exception: each fork is a separate copy sitting beside
+   your own, so each keeps its own row until you deal with it. */
+const KIND_RANK = { updated: 0, new: 1, both: 2 };
+const inboxKey = a => a.kind === 'both' ? 'fork:' + a.forkId : 'scene:' + a.sceneId;
+
+/* a project deleted since it arrived has nothing left to open */
+function pruneInbox() {
+  const before = inbox.length;
+  inbox = inbox.filter(x => x.kind === 'both'
+    ? lib.scenes.some(s => s.id === x.forkId && !s.deleted)
+    : lib.scenes.some(s => s.id === x.sceneId && !s.deleted));
+  return before - inbox.length;
+}
+
 function deliver(arrivals) {
   if (!arrivals || !arrivals.length) return 0;
-  arrivals.forEach(a => inbox.unshift(Object.assign({ id: uid(), ts: Date.now(), read: false }, a)));
+  arrivals.forEach(a => {
+    const key = inboxKey(a);
+    const i = inbox.findIndex(x => inboxKey(x) === key);
+    if (i < 0) {
+      inbox.unshift(Object.assign({ id: uid(), ts: Date.now(), read: false, times: 1 }, a));
+      return;
+    }
+    const prev = inbox.splice(i, 1)[0];
+    inbox.unshift(Object.assign({}, prev, a, {
+      /* a conflict must never be downgraded to a plain update, and a project
+         this device had never seen stays "new" until you actually open it */
+      kind: (KIND_RANK[a.kind] || 0) >= (KIND_RANK[prev.kind] || 0) ? a.kind : prev.kind,
+      /* the oldest before, so the diff spans everything you have not looked
+         at rather than only the last hop */
+      before: prev.before || a.before,
+      ts: Date.now(),
+      read: false,
+      times: (prev.times || 1) + 1
+    }));
+  });
+  pruneInbox();
   while (inbox.length > 60) inbox.pop();
   saveInbox(); paintInboxBadges();
   return arrivals.length;
@@ -1765,8 +2473,13 @@ function paintInboxBadges() {
   const n = unreadCount();
   /* the inbox only means anything once there is a second device to receive
      from — keep it out of the way until sync is connected */
-  const show = srv.on || inbox.length;
-  const hi = $('#hInbox'); if (hi) hi.style.display = show ? 'flex' : 'none';
+  const show = srv.on || cloud.on || inbox.length;
+  const hi = $('#hInbox');
+  if (hi) {
+    hi.style.display = show ? 'flex' : 'none';
+    /* it only earns the warm border when something is actually waiting */
+    hi.classList.toggle('has', !!n);
+  }
   const li = $('#libInbox'); if (li) li.style.display = show ? 'inline-block' : 'none';
   [['#hInboxBadge', '#hInboxSub'], ['#libInboxBadge', null]].forEach(([bid, sid]) => {
     const b = $(bid); if (!b) return;
@@ -1795,9 +2508,21 @@ function cutSpark(marks, dur, color) {
 function paintInbox() {
   const box = $('#ibList'); if (!box) return;
   const n = unreadCount();
+  /* "4 items need your attention" says nothing about what kind of attention.
+     New work and an edit to something you already have are different
+     errands, so count them separately. */
+  const un = inbox.filter(x => !x.read);
+  const fresh = un.filter(x => x.kind === 'new').length;
+  const edits = un.filter(x => x.kind === 'updated').length;
+  const clash = un.filter(x => x.kind === 'both').length;
+  const bits = [];
+  if (fresh) bits.push(fresh + (fresh === 1 ? ' project is new' : ' projects are new'));
+  if (edits) bits.push(edits + (edits === 1 ? ' has edits' : ' have edits'));
+  if (clash) bits.push(clash + (clash === 1 ? ' needs a look' : ' need a look'));
   $('#ibSub').textContent = !inbox.length
     ? 'Anything that arrives from your other device shows up here.'
-    : n ? n + (n === 1 ? ' item needs your attention.' : ' items need your attention.') : 'All caught up.';
+    : bits.length ? 'Sync complete — ' + bits.join(' · ') : 'All caught up.';
+  const goBtn = $('#ibGo'); if (goBtn) goBtn.style.display = inbox.length ? 'inline-block' : 'none';
   box.innerHTML = '';
   if (!inbox.length) {
     const e = el('div', 'ib-empty');
@@ -1815,6 +2540,7 @@ function paintInbox() {
     const nm = el('div', 'ib-name');
     nm.append(document.createTextNode(m.name || 'Untitled'));
     const tag = el('span', 'ib-tag ' + m.kind); tag.textContent = copy.tag; nm.appendChild(tag);
+    if ((m.times || 1) > 1) { const t = el('span', 'ib-times'); t.textContent = m.times + '×'; nm.appendChild(t); }
     const meta = el('div', 'ib-meta');
     meta.textContent = m.after.cuts + ' cuts · ' + m.after.tracks + ' tracks · ' + m.after.notes + ' notes · ' + fmtWhen(m.ts);
     main.append(nm, meta);
@@ -1876,13 +2602,21 @@ function paintInbox() {
     msg.append(row, det); box.appendChild(msg);
   });
 }
-function openInbox() { $('#inbox').classList.add('on'); paintInbox(); }
+function openInbox() {
+  if (pruneInbox()) { saveInbox(); paintInboxBadges(); }
+  $('#inbox').classList.add('on');
+  paintInbox();
+}
 function closeInbox() { $('#inbox').classList.remove('on'); }
 $('#ibClose').onclick = closeInbox;
 $('#inbox').onclick = e => { if (e.target.id === 'inbox') closeInbox(); };
 $('#ibReadAll').onclick = () => { inbox.forEach(m => m.read = true); saveInbox(); paintInbox(); paintInboxBadges(); };
 $('#hInbox').onclick = () => openInbox();
-$('#hSync').onclick = e => { e.stopPropagation(); srv.on ? openSyncPop($('#hSync')) : setupSync(); };
+$('#hSync').onclick = e => {
+  e.stopPropagation();
+  if (cloud.on) return cloud.user ? openSyncPop($('#hSync')) : setupSync();
+  srv.on ? openSyncPop($('#hSync')) : setupSync();
+};
 $('#libInbox').onclick = () => openInbox();
 
 /* ═══ per-scene edit history — local to this device only, never synced ═══ */
@@ -1938,15 +2672,38 @@ function go(next) {
   $('#library').classList.toggle('on', next === 'library');
   $('#send').classList.toggle('on', next === 'send');
   $('#sync').classList.remove('on');   /* a destination, not a modal — never leave it stuck over a new screen */
+  if (next !== 'capture') $('#pick').classList.remove('on');
   $('#stage').classList.toggle('gone', next !== 'capture');
   $('#editor').classList.toggle('on', next === 'edit');
   if (next === 'home') paintHome();
   if (next === 'send') paintSend();
-  if (next === 'library') renderScenes();
-  if (next === 'edit') { fit(); render(); }
+  if (next === 'library') {
+    renderScenes();
+    /* Opening the list is the moment you want it to be true. Asking for a
+       pull by hand was a leftover from when nothing synced on its own. */
+    checkOnOpen();
+  }
+  if (next === 'edit') { fit(); render(); ytSync(); }
   if (next !== 'edit' && playing) stopPlay();
   if (next !== 'edit' && liveMode) setLive(false);
 }
+/* The one thing on this screen that is your own work rather than a label
+   for it: every cut in the project you were last in, where it actually
+   falls. Two projects never look the same, which is the point. */
+function paintHomeSpark(sc) {
+  const box = $('#hSpark'); if (!box) return;
+  box.innerHTML = '';
+  const dur = ((sc && sc.data) || {}).duration || 0;
+  const marks = sc ? sparkOf(sc) : [];
+  if (!marks.length || !dur) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  marks.forEach(m => {
+    const i = el('i');
+    i.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+    box.appendChild(i);
+  });
+}
+
 function paintHome() {
   const h = new Date().getHours();
   $('#greet').textContent = h < 5 ? 'still up' : h < 12 ? 'good morning' : h < 17 ? 'good afternoon' : h < 22 ? 'good evening' : 'late session';
@@ -1959,8 +2716,10 @@ function paintHome() {
     $('#hContinueName').textContent = sc.name;
     $('#hContinueStats').textContent = st.cuts + ' cuts · ' + st.notes + ' notes · ' + fmtWhen(sc.updated || Date.now());
   }
+  paintHomeSpark(has ? sc : null);
   const vis = visibleScenes().length;
   $('#hScenesCount').textContent = vis + (vis === 1 ? ' project' : ' projects');
+  if (cloud.on) { paintCloud(); return; }
   const s = syncStatus();
   $('#hSyncSub').textContent = srv.on ? s.txt.toLowerCase() : 'set up to use two devices';
   const sb = $('#hSyncBadge'); if (sb) sb.style.display = (srv.on && (dirty || lastErr)) ? 'inline-block' : 'none';
@@ -1970,7 +2729,7 @@ function paintHome() {
 
 /* ═══ scenes ══════════════════════════════════════════ */
 let lib = { current: null, scenes: [] };   /* {id,name,updated,data} */
-const SCENE_KEYS = ['markers', 'timelines', 'activeTL', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum'];
+const SCENE_KEYS = ['markers', 'timelines', 'activeTL', 'layers', 'active', 'overlay', 'duration', 'audioName', 'takeNum', 'ytId', 'ytTitle'];
 const sceneData = () => { const o = {}; SCENE_KEYS.forEach(k => o[k] = P[k]); return o; };
 const curScene = () => lib.scenes.find(x => x.id === lib.current) || null;
 
@@ -2364,7 +3123,13 @@ function mergeScenes(localScenes, incoming, sinceSync) {
     }
     const remoteNewer = (s.updated || 0) > (p.updated || 0);
     const localMovedToo = (p.updated || 0) > (sinceSync || 0);
-    if (remoteNewer && localMovedToo && !p.deleted && !s.deleted) {
+    /* Timestamps alone are not a conflict. Saving is automatic now, so
+       `updated` moves on both devices constantly and this used to fork on
+       almost any concurrent activity — leaving two copies of the same song
+       with the same notes in them, which is worse than no merge at all.
+       Fork only when the two versions genuinely differ. */
+    const reallyDiffers = JSON.stringify(p.data) !== JSON.stringify(s.data);
+    if (remoteNewer && localMovedToo && reallyDiffers && !p.deleted && !s.deleted) {
       const fork = Object.assign({}, s, { id: uid() });
       forks.push(fork); m[fork.id] = fork;
       arrivals.push({ kind: 'both', sceneId: p.id, forkId: fork.id, name: p.name,
@@ -2383,11 +3148,60 @@ function mergeScenes(localScenes, incoming, sinceSync) {
 }
 let syncing = false, lastErr = '', dirty = false, syncGone = false;
 
+/* Everything that happens to the library the moment a set of projects
+   arrives, whoever carried them: merge, refresh the open editor, snapshot,
+   deliver to the inbox. The endpoint-address build and the account build
+   share it, because they differ only in how the bytes travelled and neither
+   should have its own idea of what a merge means. `since` is the last
+   exchange that build knows about, which is what decides whether a project
+   that changed in two places is a conflict. */
+function absorbScenes(rawScenes, since) {
+  const incoming = (rawScenes || []).map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
+  const before = lib.scenes.length;
+  const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
+  const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
+  const merged = mergeScenes(lib.scenes, incoming, since);
+  lib.scenes = merged.scenes;
+  merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
+
+  /* What arrives can replace the very project the editor is showing. P is a
+     copy taken at load time, so it is now stale — and the next save() would
+     write it back over the newer data. If nothing has been edited since P
+     was loaded, refresh it silently; if it has, the merge above already
+     forked the remote copy, so keep editing and just say so. */
+  const cur = curScene();
+  if (cur && cur.id === pFrom.id) {
+    /* compare the actual content, not timestamps — a timestamp differs for
+       reasons that have nothing to do with the data, and reloading P on
+       those is invisible churn that only makes the log lie */
+    const fresh = JSON.stringify(cur.data);
+    if (fresh !== JSON.stringify(sceneData())) {
+      const wasCuts = (P.markers || []).length;
+      Object.assign(P, migrate(JSON.parse(fresh)));
+      markPLoaded(cur);
+      slog('info', 'editor refreshed from the copy that arrived for "' + cur.name + '"',
+        wasCuts + ' → ' + (P.markers || []).length + ' cuts');
+      if (screen === 'edit') { recalc(); render(); updatePos(); }
+    } else markPLoaded(cur);     /* identical — just realign the version */
+  }
+  store.set(LIBKEY, lib);
+  maybeSnapshot();
+
+  /* the whole point of the trip: say what turned up, in the inbox, rather
+     than leaving the user to infer it from counts in a log */
+  const got = deliver(merged.arrivals);
+  paintSceneName();
+  if (screen === 'library') renderScenesIfIdle();
+  if (screen === 'home') paintHome();
+  return { incoming: incoming.length, before, gained, newer, got };
+}
+
 /* Sync only ever runs because you asked for it. Nothing here fires on a
    timer, on focus, or on a save — an automatic round trip that fails quietly
    is exactly what made this impossible to diagnose, so every transfer is now
    an explicit act with a logged result. `dirty` just tracks whether local
-   work has moved on since the last successful push. */
+   work has moved on since the last successful push. (The account build below
+   overrides that bargain deliberately: there, saving is the product.) */
 async function syncXfer(dir) {
   if (!srv.url) { slog('err', 'no sync address set'); toast('Connect a sync address first'); return false; }
   if (syncing) { slog('info', 'ignored — a transfer is already running'); return false; }
@@ -2441,49 +3255,15 @@ async function syncXfer(dir) {
     }
     if (!payload || !Array.isArray(payload.scenes)) { slog('err', 'reply had no scenes array', txt.slice(0, 160)); throw new Error('unexpected reply'); }
 
-    const incoming = payload.scenes.map(x => Object.assign({}, x, { data: x.deleted ? {} : migrate(x.data || {}) }));
-    const before = lib.scenes.length;
-    const gained = incoming.filter(x => !lib.scenes.some(y => y.id === x.id)).length;
-    const newer = incoming.filter(x => { const y = lib.scenes.find(z => z.id === x.id); return y && (x.updated || 0) > (y.updated || 0); }).length;
-    const merged = mergeScenes(lib.scenes, incoming, srv.last);
-    lib.scenes = merged.scenes;
+    const res = absorbScenes(payload.scenes, srv.last);
     slog('ok', (push ? 'push' : 'pull') + ' ok in ' + (Date.now() - t0) + 'ms',
-      'the database had ' + incoming.length + ' · ' + gained + ' new · ' + newer + ' newer · now ' + lib.scenes.length + ' (was ' + before + ')');
-    merged.forks.forEach(f => slog('info', 'both devices changed "' + f.name.replace(' (received)', '') + '"', 'kept yours, saved theirs as "' + f.name + '"'));
+      'the database had ' + res.incoming + ' · ' + res.gained + ' new · ' + res.newer + ' newer · now ' + lib.scenes.length + ' (was ' + res.before + ')');
 
     lastErr = ''; syncGone = false; srv.last = Date.now(); saveSrv();
     if (push) dirty = false;
+    paintSync();
 
-    /* A pull can replace the very scene the editor is showing. P is a copy
-       taken at load time, so it is now stale — and the next save() would
-       write it back over the newer data. If nothing has been edited since P
-       was loaded, refresh it silently; if it has, the merge above already
-       forked the remote copy, so keep editing and just say so. */
-    const cur = curScene();
-    if (cur && cur.id === pFrom.id) {
-      /* compare the actual content, not timestamps — a timestamp differs for
-         reasons that have nothing to do with the data, and reloading P on
-         those is invisible churn that only makes the log lie */
-      const fresh = JSON.stringify(cur.data);
-      if (fresh !== JSON.stringify(sceneData())) {
-        const wasCuts = (P.markers || []).length;
-        Object.assign(P, migrate(JSON.parse(fresh)));
-        markPLoaded(cur);
-        slog('info', 'editor refreshed from the pulled copy of "' + cur.name + '"',
-          wasCuts + ' → ' + (P.markers || []).length + ' cuts');
-        if (screen === 'edit') { recalc(); render(); updatePos(); }
-      } else markPLoaded(cur);     /* identical — just realign the version */
-    }
-    store.set(LIBKEY, lib);
-    maybeSnapshot();
-
-    /* the whole point of the trip: say what turned up, in the inbox, rather
-       than leaving the user to infer it from counts in a log */
-    const got = deliver(merged.arrivals);
-    paintSceneName(); paintSync();
-    if (screen === 'library') renderScenesIfIdle();
-    if (screen === 'home') paintHome();
-    if (got) { openInbox(); toast(got === 1 ? '1 new arrival' : got + ' new arrivals'); }
+    if (res.got) { openInbox(); toast(res.got === 1 ? '1 new arrival' : res.got + ' new arrivals'); }
     else toast(push ? 'pushed — the database is up to date' : 'nothing new — you already have it all');
     return true;
   } catch (e) {
@@ -2508,12 +3288,18 @@ const syncPull = () => syncXfer('pull');
 const syncPush = () => syncXfer('push');
 /* every edit used to schedule a background push; now it only records that
    there is something worth pushing, which the UI surfaces */
-const syncSoon = () => { if (srv.on) { dirty = true; paintSync(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); } };
+const syncSoon = () => {
+  if (cloud.on) return cloudSoon();
+  if (srv.on) { dirty = true; paintSync(); if ($('#syncPop').classList.contains('on')) paintSyncPop(); }
+};
 
 addEventListener('pagehide', flushSave);
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 function saveSrv() { store.set(SKEY, { url: srv.url, on: srv.on }); }
 function paintSync(err) {
+  /* On the account build there is no address, no pairing and no push — the
+     same widgets say whether your work is saved instead. */
+  if (cloud.on) return paintCloud();
   const sb = $('#syncBtn'), sl = $('#syncLbl');
   const e = err || lastErr;
   if (sb) {
@@ -2538,15 +3324,20 @@ function paintSync(err) {
   if (srv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
   const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && srv.on) ? 'synced with your database when you ask' : 'stored on this device';
   paintInboxBadges();
+  if (typeof screen !== 'undefined' && screen === 'send') paintSend(true);
 }
 function openSync() { closeSyncPop(); $('#sync').classList.add('on'); paintSync(); }
 function closeSync() { $('#sync').classList.remove('on'); }
-$('#syncSetup').onclick = openSync;
+$('#syncSetup').onclick = () => {
+  if (cloud.on) return cloud.user ? openSyncPop($('#syncSetup')) : setupSync();
+  openSync();
+};
 $('#syncClose').onclick = closeSync;
 $('#sync').onclick = e => { if (e.target.id === 'sync') closeSync(); };
 /* The sync popover — the whole point is that you never have to leave what
    you are doing, or read a log, to send work or find out whether it went. */
 function syncStatus() {
+  if (cloud.on) return cloudStatus();
   if (!srv.on) return { cls: '', txt: 'Not connected', sub: 'Set up sync to use two devices' };
   if (syncing) return { cls: 'busy', txt: 'Working…', sub: '' };
   if (syncGone) return { cls: 'err', txt: 'Nothing at that address', sub: 'Check the endpoint is deployed, then Reconnect below' };
@@ -2559,6 +3350,13 @@ function paintSyncPop() {
   $('#spState').className = 'sp-state ' + s.cls;
   $('#spTxt').textContent = s.txt;
   $('#spSub').textContent = s.sub;
+  if (cloud.on) {
+    $('#spPull').disabled = $('#spPush').disabled = cloud.busy;
+    $('#spPush').textContent = !cloud.user ? 'Sign in' : cloud.err ? 'Try saving again' : 'Save now';
+    $('#spPull').textContent = 'Get the latest';
+    $('#spPair').textContent = cloud.user ? 'Sign out' : 'Sign in';
+    return;
+  }
   $('#spPull').disabled = $('#spPush').disabled = syncing;
   $('#spPush').textContent = !srv.on ? 'Set up sync' : syncGone ? 'Reconnect' : 'Send my work';
 }
@@ -2579,11 +3377,27 @@ $('#syncBtn').onclick = e => {
   e.stopPropagation();
   $('#syncPop').classList.contains('on') ? closeSyncPop() : openSyncPop($('#syncBtn'));
 };
-$('#spPull').onclick = async () => { if (!srv.on) return setupSync(); await syncPull(); paintSyncPop(); };
-$('#spPush').onclick = async () => { if (!srv.on || syncGone) return setupSync(); await syncPush(); paintSyncPop(); };
-$('#spPair').onclick = () => { closeSyncPop(); srv.on ? openPair() : setupSync(); };
+$('#spPull').onclick = async () => {
+  if (cloud.on) { if (!cloud.user) return setupSync(); await cloudPull(); return paintSyncPop(); }
+  if (!srv.on) return setupSync();
+  await syncPull(); paintSyncPop();
+};
+$('#spPush').onclick = async () => {
+  if (cloud.on) { if (!cloud.user) return setupSync(); await cloudSave(); return paintSyncPop(); }
+  if (!srv.on || syncGone) return setupSync();
+  await syncPush(); paintSyncPop();
+};
+$('#spPair').onclick = () => {
+  if (cloud.on) return cloud.user ? cloudSignOut() : setupSync();
+  closeSyncPop(); srv.on ? openPair() : setupSync();
+};
 $('#spLog').onclick = () => { closeSyncPop(); openLogs(); };
+$('#spMain').onclick = () => openMainOf();
 function setupSync() {
+  closeSyncPop();
+  /* there is no address to paste on the account build — the way in is the
+     login, and the sync screen behind it has nothing left to say */
+  if (cloud.on) { cloud.local = false; paintAuthMode(); openAuth(); const u = $('#auUser'); if (u) u.focus(); return; }
   openSync();
   const f = $('#dpId'); if (f) f.focus();
 }
@@ -2599,6 +3413,409 @@ function flashSaved() {
 }
 $('#dpId').addEventListener('keydown', e => { if (e.key === 'Enter') $('#dpConnect').click(); });
 $('#dpHow').onclick = () => $('#dpSetup').classList.toggle('on');
+
+/* ═══ accounts — the deploy that answers on /api ════════════════════════
+   Same app, same database, different front door. Carrying an endpoint
+   address with its key on it to a second device — by QR, by link, by
+   typing — is the thing that made setting this up a chore, and Push and
+   Pull are two more things to remember. Where /api answers, a username and
+   a password replace the address, and saving replaces both buttons.
+
+   The storage underneath is untouched: /api/state speaks the same
+   { scenes } that the ?key= endpoint always has, and merges per project on
+   the server the same way. A save is also a fetch — the reply is the merged
+   set — so there is nothing left for a Pull to do. All of this stays inert
+   unless the probe at boot finds that backend. */
+const CKEY = 'tapline.account', CLOUDHINT = 'tapline.cloud';
+let cloud = {
+  on: false,        /* this deploy has the accounts backend */
+  user: '',         /* who is signed in */
+  last: 0,          /* last successful exchange, the merge cut-off */
+  lastPull: 0,
+  busy: false,
+  err: '',
+  local: false      /* chose to carry on without an account */
+};
+let cloudTimer = 0, cloudGen = 0, cloudMode = 'in';   /* the auth card: sign in or join */
+
+/* Remembered so a return visit shows the right front door immediately
+   instead of flashing the wrong one for a round trip. */
+const cloudHint = () => { try { return localStorage.getItem(CLOUDHINT) === '1'; } catch (e) { return false; } };
+const setCloudHint = v => { try { localStorage.setItem(CLOUDHINT, v ? '1' : '0'); } catch (e) {} };
+const saveCloud = () => store.set(CKEY, { user: cloud.user, last: cloud.last });
+
+async function api(path, opts) {
+  const o = Object.assign({ credentials: 'same-origin', headers: { 'content-type': 'application/json' } }, opts || {});
+  /* a cold function waking Atlas can take a few seconds on the first call */
+  const ac = typeof AbortController === 'function' ? new AbortController() : null;
+  const killer = ac ? setTimeout(() => ac.abort(), 45000) : 0;
+  try {
+    const r = await fetch('/api' + path, ac ? Object.assign(o, { signal: ac.signal }) : o);
+    let data = null;
+    try { data = JSON.parse(await r.text()); } catch (e) {}
+    return { ok: r.ok, status: r.status, data: data || {} };
+  } finally { clearTimeout(killer); }
+}
+
+/* ── the login screen ───────────────────────────────── */
+function openAuth() { $('#auth').classList.add('on'); }
+function closeAuth() { $('#auth').classList.remove('on'); $('#auErr').textContent = ''; }
+function authMsg(msg, bad) {
+  const e = $('#auErr');
+  e.textContent = msg || '';
+  e.classList.toggle('bad', !!bad);
+}
+function paintAuthMode() {
+  const join = cloudMode === 'up';
+  $('#auTitle').textContent = join ? 'Make an account' : 'Sign in';
+  $('#auLede').textContent = join
+    ? 'Pick a name and a password. Use the same two on your phone and your laptop and they share one set of projects.'
+    : 'Sign in on every device you use. Your projects follow, and saving happens on its own.';
+  $('#auGo').textContent = join ? 'Create account' : 'Sign in';
+  $('#auSwap').textContent = join ? 'I already have an account' : "I don't have an account yet";
+  $('#auPass').setAttribute('autocomplete', join ? 'new-password' : 'current-password');
+  authMsg('');
+}
+$('#auSwap').onclick = () => { cloudMode = cloudMode === 'up' ? 'in' : 'up'; paintAuthMode(); $('#auUser').focus(); };
+$('#auGo').onclick = () => cloudAuth();
+$('#auLocal').onclick = () => {
+  cloud.local = true; closeAuth();
+  slog('info', 'carrying on without an account', 'this device only — nothing goes to the database');
+  toast('working on this device only');
+  paintCloud();
+};
+['#auUser', '#auPass'].forEach(sel => $(sel).addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') cloudAuth();
+}));
+
+async function cloudAuth() {
+  const user = $('#auUser').value.trim().toLowerCase(), pass = $('#auPass').value;
+  if (!user || !pass) return authMsg('Fill in both, then try again.', true);
+  $('#auGo').disabled = true;
+  authMsg(cloudMode === 'up' ? 'creating…' : 'signing in…');
+  try {
+    const creds = JSON.stringify({ username: user, password: pass });
+    let r = await api(cloudMode === 'up' ? '/signup' : '/login', { method: 'POST', body: creds });
+
+    /* A second device is a fresh install, so it opens on "Make an account" —
+       and typing the name and password you already have is what people
+       actually do there. Answering "that username is taken" and leaving them
+       to hunt for the swap link is a dead end, so try it as a sign-in. */
+    if (r.status === 409) {
+      cloudMode = 'in'; paintAuthMode();
+      const asSignIn = await api('/login', { method: 'POST', body: creds });
+      if (asSignIn.ok) { slog('info', 'that account already existed — signed in instead'); r = asSignIn; }
+      else {
+        slog('err', 'could not create that account', 'name taken, password does not match it');
+        return authMsg('That name is taken — and that password does not match it.', true);
+      }
+    }
+
+    if (!r.ok) {
+      slog('err', cloudMode === 'up' ? 'could not create that account' : 'sign-in refused', r.data.error || ('http ' + r.status));
+      return authMsg(r.data.error || 'That did not work. Try again.', true);
+    }
+    cloud.user = r.data.user; cloud.local = false; cloud.err = '';
+    /* A different account on this device must not inherit the cut-off the
+       previous one was working from — everything would read as a conflict. */
+    const prev = (await store.get(CKEY)) || {};
+    cloud.last = prev.user === cloud.user ? (prev.last || 0) : 0;
+    saveCloud();
+    if (r.data.adopted) {
+      slog('ok', 'took over the projects already in the database',
+        r.data.adopted + ' from before there were accounts — they are yours now');
+    }
+    $('#auPass').value = '';
+    closeAuth();
+    slog('ok', 'signed in as ' + cloud.user);
+    paintCloud();
+    await cloudPull(true);
+    /* Anything made before signing in is real work — hand it over, don't
+       strand it on the device. */
+    if (lib.scenes.some(s => !s.deleted)) await cloudSave({ quiet: true });
+  } catch (e) {
+    slog('err', 'sign-in never completed', String(e.message || e));
+    authMsg(navigator.onLine ? 'Could not reach the server. Try again.' : 'You are offline.', true);
+  } finally {
+    $('#auGo').disabled = false;
+  }
+}
+
+function cloudSignedOut(why) {
+  cloud.user = ''; cloud.busy = false;
+  saveCloud(); paintCloud();
+  cloudMode = 'in'; paintAuthMode(); openAuth();
+  if (why) authMsg(why, true);
+  return false;
+}
+
+/* Two devices drift apart — a fork here, a delete that never travelled, a
+   phone that has not synced in a week — and comparing them by hand is worse
+   than picking one. This says which one is right.
+
+   It reaches the other devices, so it asks first, and it says exactly what
+   will go rather than how many. Nothing is destroyed: what goes is
+   tombstoned server-side the same way a normal delete is, which is also how
+   the other devices learn about it. */
+async function openMainOf() {
+  closeSyncPop(); closeInbox();
+  if (!cloud.on || !cloud.user) return setupSync();
+  const page = $('#mainOf');
+  page.classList.add('on');
+  $('#moGo').disabled = true;
+  $('#moDrop').innerHTML = '';
+  $('#moLede').textContent = 'Checking what your other devices have…';
+  $('#moHere').textContent = visibleScenes().length;
+  $('#moThere').textContent = '—';
+  try {
+    const r = await api('/state');
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    const theirs = (r.data.scenes || []).filter(x => !x.deleted);
+    const mine = new Set(lib.scenes.filter(x => !x.deleted).map(x => x.id));
+    const gone = theirs.filter(x => !mine.has(x.id));
+    $('#moThere').textContent = theirs.length;
+    $('#moLede').textContent = gone.length
+      ? 'These projects are on the account but not on this device. Going ahead removes them from your other devices too.'
+      : 'Everything on the account is already here — going ahead just makes sure the others match.';
+    const box = $('#moDrop');
+    if (gone.length) {
+      const h = el('div', 'mo-drop-h');
+      h.textContent = gone.length === 1 ? '1 project would go' : gone.length + ' projects would go';
+      box.appendChild(h);
+      gone.slice(0, 8).forEach(x => {
+        const i = el('div', 'mo-drop-i');
+        const st = statsOf(x.data);
+        i.textContent = (x.name || 'Untitled') + ' — ' + st.cuts + ' cuts, ' + st.notes + ' notes';
+        box.appendChild(i);
+      });
+      if (gone.length > 8) {
+        const m = el('div', 'mo-drop-i'); m.textContent = 'and ' + (gone.length - 8) + ' more'; box.appendChild(m);
+      }
+    }
+    $('#moGo').disabled = false;
+  } catch (e) {
+    $('#moLede').textContent = 'Could not reach the account to compare — try again in a moment.';
+    slog('err', 'could not compare the devices', cloudWhy(e));
+  }
+}
+const closeMainOf = () => $('#mainOf').classList.remove('on');
+$('#moCancel').onclick = closeMainOf;
+$('#mainOf').onclick = e => { if (e.target.id === 'mainOf') closeMainOf(); };
+$('#moGo').onclick = async () => {
+  $('#moGo').disabled = true;
+  $('#moLede').textContent = 'Sending…';
+  try {
+    commitP(curScene(), false);
+    const r = await api('/state', { method: 'POST', body: JSON.stringify({ scenes: lib.scenes, mode: 'replace' }) });
+    if (r.status === 401) { closeMainOf(); return cloudSignedOut('Your session ran out. Sign in again.'); }
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    absorbScenes(r.data.scenes, cloud.last);
+    cloud.last = Date.now(); cloud.lastPull = Date.now(); cloud.err = ''; dirty = false;
+    saveCloud(); paintCloud();
+    slog('ok', 'this device is now the one', (r.data.removed || 0) + ' removed from the account');
+    closeMainOf();
+    toast(r.data.removed ? 'done — ' + r.data.removed + ' removed everywhere' : 'done — your devices match');
+  } catch (e) {
+    $('#moGo').disabled = false;
+    $('#moLede').textContent = 'That did not go through: ' + cloudWhy(e);
+    slog('err', 'could not make this device the one', cloudWhy(e));
+  }
+};
+
+async function cloudSignOut() {
+  closeSyncPop();
+  try { await api('/logout', { method: 'POST' }); } catch (e) {}
+  slog('info', 'signed out', 'projects stay on this device');
+  cloudSignedOut('');
+}
+
+/* ── the exchange ───────────────────────────────────── */
+async function cloudPull(quiet) {
+  if (!cloud.on || !cloud.user || cloud.busy) return false;
+  cloud.busy = true; paintCloud();
+  const t0 = Date.now();
+  try {
+    slog('net', 'GET → your account');
+    const r = await api('/state');
+    if (r.status === 401) return cloudSignedOut('Your session ran out. Sign in again.');
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+    const res = absorbScenes(r.data.scenes, cloud.last);
+    cloud.last = Date.now(); cloud.lastPull = Date.now(); cloud.err = '';
+    saveCloud();
+    slog('ok', 'got your work in ' + (Date.now() - t0) + 'ms',
+      'the database had ' + res.incoming + ' · ' + res.gained + ' new · ' + res.newer + ' newer · now ' + lib.scenes.length + ' (was ' + res.before + ')');
+    if (res.got) { openInbox(); toast(res.got === 1 ? '1 new arrival' : res.got + ' new arrivals'); }
+    else if (!quiet) toast('up to date');
+    return true;
+  } catch (e) {
+    cloud.err = cloudWhy(e);
+    slog('err', 'could not get your work', cloud.err);
+    if (!quiet) toast(cloud.err);
+    return false;
+  } finally {
+    cloud.busy = false; paintCloud();
+  }
+}
+
+/* The save. The endpoint merges per project and hands back the result, so
+   this is a push and a pull in one trip — whatever the other device did
+   arrives as part of saving, and there is no second button for it. */
+async function cloudSave(opts) {
+  opts = opts || {};
+  if (!cloud.on || !cloud.user) return false;
+  if (cloud.busy) { dirty = true; return false; }
+  clearTimeout(cloudTimer); cloudTimer = 0;
+  cloud.busy = true; paintCloud();
+  const t0 = Date.now();
+  try {
+    commitP(curScene(), false);   /* fold the editor in, without restamping */
+    /* An edit made while this request is in flight must not be cleared by
+       its reply — the reply only speaks for the work that went with it. */
+    const gen = cloudGen;
+    const body = JSON.stringify({ scenes: lib.scenes });
+    slog('net', 'POST → your account', lib.scenes.length + ' projects, ' + body.length + ' bytes');
+    const r = await api('/state', { method: 'POST', body });
+
+    if (r.status === 401) return cloudSignedOut('Your session ran out. Sign in again.');
+    if (!r.ok) throw new Error(r.data.error || ('http ' + r.status));
+
+    const res = absorbScenes(r.data.scenes, cloud.last);
+    cloud.last = Date.now(); cloud.lastPull = Date.now(); cloud.err = '';
+    if (gen === cloudGen) dirty = false;
+    saveCloud();
+    slog('ok', 'saved in ' + (Date.now() - t0) + 'ms',
+      'the database now holds ' + res.incoming + (res.gained ? ' · ' + res.gained + ' new here' : ''));
+    if (res.got) { openInbox(); toast(res.got === 1 ? '1 new arrival' : res.got + ' new arrivals'); }
+    else if (!opts.quiet) flashSaved();
+    return true;
+  } catch (e) {
+    cloud.err = cloudWhy(e);
+    slog('err', 'save did not go through', cloud.err);
+    if (!opts.quiet) toast('not saved · ' + cloud.err);
+    return false;
+  } finally {
+    cloud.busy = false;
+    /* whatever happened, work that is still unsaved gets another go rather
+       than waiting for the user to happen to type something */
+    if (dirty && !cloudTimer && cloud.user) cloudTimer = setTimeout(() => cloudSave({ quiet: true }), cloud.err ? 15000 : 1400);
+    paintCloud();
+  }
+}
+
+/* fetch() rejects with the same bare message for offline, a cold function
+   and a dead one alike, so say which one it actually was. */
+function cloudWhy(e) {
+  const m = String((e && e.message) || e);
+  if (/abort/i.test(m)) return 'the server took too long';
+  if (/failed to fetch|networkerror|load failed/i.test(m)) return navigator.onLine ? 'could not reach the server' : 'you are offline';
+  return m;
+}
+
+/* Every edit already writes to this device. This is the difference: it also
+   queues the trip to the database, so there is no button to remember. */
+function cloudSoon() {
+  if (!cloud.on || !cloud.user) return;
+  dirty = true; cloudGen++;
+  paintCloud();
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => cloudSave({ quiet: true }), 1400);
+}
+
+/* A tab being closed mid-edit is the one moment a debounce cannot survive,
+   and it is exactly when people close the lid. */
+function cloudBeacon() {
+  if (!cloud.on || !cloud.user || !dirty || !navigator.sendBeacon) return;
+  try {
+    commitP(curScene(), false);
+    const blob = new Blob([JSON.stringify({ scenes: lib.scenes })], { type: 'application/json' });
+    if (navigator.sendBeacon('/api/state', blob)) slog('info', 'sent a last save on the way out');
+  } catch (e) {}
+}
+addEventListener('pagehide', cloudBeacon);
+
+/* Coming back to a tab is the moment the other device's work matters, and
+   it is a real gesture rather than a timer. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { cloudBeacon(); return; }
+  if (!cloud.on || !cloud.user || cloud.busy) return;
+  if (dirty) { cloudSave({ quiet: true }); return; }
+  if (Date.now() - cloud.lastPull > 30000) cloudPull(true);
+});
+
+/* ── what it looks like ─────────────────────────────── */
+function cloudStatus() {
+  if (cloud.local) return { cls: '', txt: 'This device only', sub: 'sign in to save your work', lbl: 'local only' };
+  if (!cloud.user) return { cls: '', txt: 'Not signed in', sub: 'sign in and saving takes care of itself', lbl: 'sign in' };
+  if (cloud.busy) return { cls: 'busy', txt: 'Saving…', sub: 'signed in as ' + cloud.user, lbl: 'saving' };
+  if (cloud.err) return { cls: 'err', txt: "Couldn't save", sub: cloud.err, lbl: 'not saved' };
+  if (dirty) return { cls: 'pending', txt: 'Saving in a moment', sub: 'signed in as ' + cloud.user, lbl: 'saving' };
+  return { cls: 'ok', txt: 'Saved', sub: cloud.last ? 'saved ' + fmtWhen(cloud.last) : 'signed in as ' + cloud.user, lbl: 'saved' };
+}
+function paintCloud() {
+  const s = cloudStatus();
+  const sb = $('#syncBtn'), sl = $('#syncLbl');
+  if (sb) {
+    sb.classList.toggle('on', s.cls === 'ok');
+    sb.classList.toggle('busy', s.cls === 'busy');
+    sb.classList.toggle('err', s.cls === 'err');
+    sb.classList.toggle('pending', s.cls === 'pending');
+    sb.title = cloud.user ? 'Saved to your account' : 'Sign in to save';
+    if (sl) sl.textContent = s.lbl;
+  }
+  const setup = $('#syncSetup');
+  if (setup) {
+    setup.classList.toggle('ok', !!cloud.user);
+    setup.textContent = cloud.user ? 'Account' : 'Sign in';
+  }
+  const hss = $('#hSyncSub'); if (hss) hss.textContent = s.sub || s.txt.toLowerCase();
+  const hsb = $('#hSyncBadge'); if (hsb) hsb.style.display = (cloud.user && cloud.err) ? 'inline-block' : 'none';
+  const hs = $('#hStore');
+  if (hs) hs.textContent = cloud.user ? 'saved to your account as ' + cloud.user
+    : cloud.local ? 'stored on this device' : 'sign in to save your work';
+  if ($('#syncPop').classList.contains('on')) paintSyncPop();
+  paintInboxBadges();
+  if (typeof screen !== 'undefined' && screen === 'send') paintSend(true);
+}
+
+async function cloudBoot() {
+  let on = false;
+  try { const r = await api('/health'); on = !!(r.ok && r.data.cloud); } catch (e) { on = false; }
+  setCloudHint(on);
+  cloud.on = on;
+  if (!on) {
+    document.body.classList.remove('cloud');
+    closeAuth();
+    paintSync();
+    slog('info', 'ready', srv.on ? 'sync connected · pull/push is manual' : 'sync not connected · local only');
+    return;
+  }
+  document.body.classList.add('cloud');
+  /* nothing here is called push, pull or an address any more — it is your
+     account, and whether your work is on it */
+  $('#logPull').textContent = 'Get the latest';
+  $('#logPush').textContent = 'Save now';
+  $('#hSyncTitle').textContent = 'Your account';
+  $('#hInboxSub').textContent = 'what came in from your other device';
+  const saved = (await store.get(CKEY)) || {};
+  let me = { ok: false, data: {} };
+  try { me = await api('/me'); } catch (e) {}
+  if (me.ok && me.data.user) {
+    cloud.user = me.data.user;
+    if (saved.user === cloud.user) cloud.last = saved.last || 0;
+    closeAuth();
+    slog('info', 'ready', 'signed in as ' + cloud.user + ' · saving happens on its own');
+    paintCloud();
+    await cloudPull(true);
+  } else {
+    slog('info', 'ready', 'not signed in · projects are on this device until you do');
+    cloudMode = saved.user ? 'in' : 'up';
+    if (saved.user) $('#auUser').value = saved.user;
+    paintAuthMode();
+    paintCloud();
+    openAuth();
+  }
+}
 $('#dpCopyCode').onclick = () => navigator.clipboard.writeText(hostKind === 'fn' ? MONGO_FN : MONGO_NODE)
   .then(() => toast('code copied'), () => toast('copy blocked by the browser'));
 /* What belongs in the box is the address the endpoint answers on. The one
@@ -2656,10 +3873,76 @@ document.addEventListener('focusout', e => {
   setTimeout(() => { if (scenesStale && !scenesBusy()) renderScenesIfIdle(); }, 0);
 });
 
+/* What a project card says about where it lives. This used to measure every
+   project against srv.last — the endpoint-address build's clock — which the
+   account build never touches. Anyone who had once connected the old ?key=
+   address still had srv.on true and a stale srv.last, so every card read
+   "not sent yet" forever no matter how well the account had saved it. */
+function cardSyncState(sc) {
+  const at = sc.updated || 0;
+  if (cloud.on) {
+    if (!cloud.user) return { text: 'on this device', pending: false };
+    const done = at <= (cloud.last || 0);
+    return { text: done ? 'saved' : 'saving…', pending: !done };
+  }
+  if (!srv.on) return { text: 'on this device', pending: false };
+  const done = at <= (srv.last || 0);
+  return { text: done ? 'sent' : 'not sent yet', pending: !done };
+}
+
+/* The queue, in the same terms the cards use — so a project sitting in the
+   lane and the same project's card can never disagree. */
+function paintSaveLane(all) {
+  const lane = $('#saveLane'); if (!lane) return;
+  const live = cloud.on ? !!cloud.user : srv.on;
+  lane.style.display = live ? 'block' : 'none';
+  if (!live) return;
+
+  const waiting = all.filter(sc => cardSyncState(sc).pending);
+  const err = cloud.on ? cloud.err : lastErr;
+  lane.className = 'save-lane' + (err ? ' bad' : waiting.length ? ' pending' : '');
+
+  $('#slTitle').textContent = err ? "Couldn't save"
+    : waiting.length ? waiting.length + (waiting.length === 1 ? ' waiting to save' : ' waiting to save')
+    : 'All saved';
+
+  const at = cloud.on ? cloud.last : srv.last;
+  $('#slWhen').textContent = err ? err : at ? 'last saved ' + fmtWhen(at) : '';
+
+  const q = $('#slQueue'); q.innerHTML = '';
+  waiting.slice(0, 6).forEach(sc => {
+    const c = el('div', 'sl-chip');
+    const d = el('i'), n = el('span'); n.textContent = sc.name || 'Untitled';
+    c.append(d, n); q.appendChild(c);
+  });
+  if (waiting.length > 6) {
+    const c = el('div', 'sl-chip'); const n = el('span');
+    n.textContent = '+' + (waiting.length - 6) + ' more'; c.appendChild(n); q.appendChild(c);
+  }
+}
+
+let libFilter = 'all';
+$('#libFilter').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  libFilter = b.dataset.f;
+  renderScenes();
+};
+
 function renderScenes() {
   const box = $('#scList'); if (!box) return;
   box.innerHTML = '';
-  visibleScenes().slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).forEach(sc => {
+  const all = visibleScenes();
+  const mine = all.filter(x => isMine(x.id)), theirs = all.filter(x => !isMine(x.id));
+  /* the filter is only worth showing once there is actually a mix */
+  const worth = mine.length && theirs.length;
+  $('#libFilter').style.display = worth ? 'flex' : 'none';
+  if (!worth) libFilter = 'all';
+  [...$('#libFilter').children].forEach(b => b.classList.toggle('on', b.dataset.f === libFilter));
+  const shown = libFilter === 'mine' ? mine : libFilter === 'theirs' ? theirs : all;
+
+  paintSaveLane(all);
+
+  shown.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).forEach(sc => {
     const isCur = sc.id === lib.current;
     const card = el('div', 'sc-card' + (isCur ? ' cur' : ''));
 
@@ -2731,9 +4014,10 @@ function renderScenes() {
 
     const spacer = el('div', 'sc-spacer');
 
-    const cloud = el('span', 'sc-cloud' + (srv.on && (sc.updated || 0) > srv.last ? ' pending' : ''));
-    const dot = el('i'); cloud.appendChild(dot);
-    cloud.appendChild(document.createTextNode(!srv.on ? 'on this device' : (sc.updated || 0) > srv.last ? 'not sent yet' : 'sent'));
+    const st = cardSyncState(sc);
+    const cloudTag = el('span', 'sc-cloud' + (st.pending ? ' pending' : ''));
+    const dot = el('i'); cloudTag.appendChild(dot);
+    cloudTag.appendChild(document.createTextNode(st.text));
 
     const cta = el('div', 'sc-cta');
     const openBtn = el('button', 'sc-btn open'); openBtn.textContent = 'Open timeline';
@@ -2775,7 +4059,7 @@ function renderScenes() {
       });
     }
 
-    card.append(top, meta, midIcons, spacer, cloud, cta, histBox);
+    card.append(top, meta, midIcons, spacer, cloudTag, cta, histBox);
     box.appendChild(card);
   });
 }
@@ -2795,6 +4079,7 @@ $('#keys').onclick = e => { if (e.target.id === 'keys') $('#keys').classList.rem
 $('#libBack').onclick = () => go('home');
 $('#mScenes').onclick = () => go('library');
 function freshScene() {
+  recKind = 'project'; recTL = null;
   const sc = blankScene(); lib.scenes.unshift(sc); lib.current = sc.id; claimMine(sc.id);
   Object.assign(P, migrate(JSON.parse(JSON.stringify(sc.data))));
   markPLoaded(sc);
@@ -2805,7 +4090,12 @@ function freshScene() {
   return sc;
 }
 $('#scNew').onclick = () => freshScene();
-$('#hNew').onclick = () => freshScene();
+$('#hNew').onclick = () => {
+  /* with nothing to add to, the question has one answer — do not ask it */
+  const addable = visibleScenes().some(s => ((s.data || {}).markers || []).length);
+  if (isCompact() && addable) return openPick();
+  freshScene();
+};
 $('#hScenes').onclick = () => go('library');
 $('#hContinue').onclick = () => go(P.markers.length ? workScreen() : 'capture');
 $('#scImport').onclick = () => $('#jsonIn').click();
@@ -3022,14 +4312,255 @@ function frame(ts) {
   rafId = requestAnimationFrame(frame);
 }
 
+/* ═══ playing from YouTube ═════════════════════════════════════════════
+   Finding the mp3 was the step between having a song and marking it up,
+   and on a phone it often meant you simply could not. So the song can come
+   from YouTube instead: paste a link, the app hosts a small player and
+   drives it, and the transport reads the player's own clock rather than
+   counting frames. Cuts, seeking and live notes all land where they should.
+
+   Nothing is uploaded, downloaded or stored. Only the eleven-character
+   video id rides along in the project, so the other device opens the same
+   song without anyone sending anything.
+
+   No waveform is possible — the browser will not let one page read audio
+   out of another origin's player — so the ruler stays as it is without a
+   file. That is the trade for never loading anything. */
+const YT_PATTERNS = [
+  /(?:youtube\.com|youtube-nocookie\.com)\/watch\?(?:.*&)?v=([\w-]{11})/i,
+  /youtu\.be\/([\w-]{11})/i,
+  /(?:youtube\.com|youtube-nocookie\.com)\/(?:embed|v|shorts|live)\/([\w-]{11})/i,
+  /^([\w-]{11})$/
+];
+/* music.youtube.com links match the first pattern too — the host contains
+   youtube.com — which is the point: a link copied out of YouTube Music
+   plays the same track here. */
+function ytIdFrom(s) {
+  s = String(s || '').trim();
+  for (const re of YT_PATTERNS) { const m = re.exec(s); if (m) return m[1]; }
+  return '';
+}
+
+let yt = { id: '', player: null, ready: false, playing: false, dur: 0, t: 0, tAt: 0, err: '' };
+const hasYT = () => !!(yt.ready && yt.player);
+
+let ytApi = null;
+function ytLoadApi() {
+  if (ytApi) return ytApi;
+  ytApi = new Promise((res, rej) => {
+    if (window.YT && window.YT.Player) return res(window.YT);
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') prev(); res(window.YT); };
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => rej(new Error('could not reach YouTube'));
+    document.head.appendChild(s);
+    /* offline, or blocked — say so rather than leaving a dead panel */
+    setTimeout(() => { if (!(window.YT && window.YT.Player)) rej(new Error('YouTube did not load')); }, 15000);
+  });
+  return ytApi;
+}
+
+/* YT.Player replaces the element it is given, so every attach gets a fresh
+   one rather than trying to reuse a node that is now an iframe. */
+function ytTarget() {
+  const box = $('#ytBox'); box.innerHTML = '';
+  const d = el('div'); d.id = 'ytFrame';
+  box.appendChild(d);
+  return d;
+}
+
+function ytErrText(code) {
+  if (code === 2) return 'that link does not look like a video';
+  if (code === 5) return 'this video will not play in an embedded player';
+  if (code === 100) return 'that video is gone or private';
+  if (code === 101 || code === 150) return 'the owner does not allow this video to be played outside YouTube';
+  return 'YouTube refused that video (' + code + ')';
+}
+
+async function ytAttach(id, opts) {
+  opts = opts || {};
+  if (!id) return false;
+  yt.err = ''; ytPaint();
+  try {
+    const API = await ytLoadApi();
+    if (yt.player && yt.player.destroy) { try { yt.player.destroy(); } catch (e) {} }
+    yt.player = null; yt.ready = false; yt.playing = false; yt.id = id;
+    ytTarget();
+    yt.player = new API.Player('ytFrame', {
+      videoId: id,
+      playerVars: { controls: 1, rel: 0, modestbranding: 1, playsinline: 1, origin: location.origin },
+      events: {
+        onReady: () => ytOnReady(opts),
+        onStateChange: ytOnState,
+        onError: e => {
+          yt.err = ytErrText(e.data); yt.ready = false;
+          slog('err', 'youtube would not play that', yt.err);
+          ytPaint();
+        }
+      }
+    });
+    return true;
+  } catch (e) {
+    yt.err = String(e.message || e);
+    slog('err', 'could not start the YouTube player', yt.err);
+    ytPaint();
+    return false;
+  }
+}
+
+function ytOnReady(opts) {
+  yt.ready = true;
+  yt.dur = (yt.player.getDuration && yt.player.getDuration()) || 0;
+  yt.err = '';
+  const data = yt.player.getVideoData ? yt.player.getVideoData() : null;
+  const title = (data && data.title) || '';
+  P.ytId = yt.id;
+  if (title) P.ytTitle = title;
+  slog('ok', 'playing from youtube', title || yt.id);
+  ytAdoptDuration();
+  if (!opts.silent) { save(); toast(title ? 'ready — ' + title : 'ready to play'); }
+  paintAudioTag(); ytPaint(); updatePos();
+}
+
+/* The ruler has to agree with the song, or every cut sits in the wrong
+   section. Take the video's length — but never shorter than what has
+   already been tapped, which would push those cuts off the end. */
+function ytAdoptDuration() {
+  if (!yt.dur) return;
+  const was = P.duration;
+  recalc();                          /* now knows the video's length */
+  if (Math.abs(was - P.duration) < .5) return;
+  if (screen === 'edit') { fit(); render(); }
+  slog('info', 'timeline length taken from the video', fmt(was) + ' → ' + fmt(P.duration));
+}
+
+function ytOnState(e) {
+  const s = e.data;
+  if (s === 1) {                       /* playing */
+    yt.playing = true; ytSample();
+    /* pressing play on the player itself should start the app too, so the
+       two are never running against each other */
+    if (!playing && screen === 'edit') startPlay(true);
+  } else if (s === 2 || s === 0) {     /* paused, ended */
+    yt.playing = false;
+    if (playing) stopPlay(true);
+  }
+  ytPaint();
+}
+
+function ytSample() {
+  if (!hasYT() || !yt.player.getCurrentTime) return;
+  yt.t = yt.player.getCurrentTime() || 0;
+  yt.tAt = performance.now();
+}
+/* getCurrentTime only moves a few times a second, so a playhead driven
+   straight off it visibly steps. Run forward from the last change and
+   resync the moment a new value lands. */
+function ytTime() {
+  if (!hasYT() || !yt.player.getCurrentTime) return 0;
+  const raw = yt.player.getCurrentTime() || 0;
+  if (raw !== yt.t) { yt.t = raw; yt.tAt = performance.now(); return raw; }
+  if (!yt.playing) return raw;
+  return raw + (performance.now() - yt.tAt) / 1000;
+}
+
+function ytDetach(silent) {
+  if (yt.player && yt.player.destroy) { try { yt.player.destroy(); } catch (e) {} }
+  yt.player = null; yt.ready = false; yt.playing = false; yt.id = ''; yt.dur = 0; yt.err = '';
+  const box = $('#ytBox'); if (box) box.innerHTML = '';
+  if (!silent) {
+    P.ytId = ''; P.ytTitle = '';
+    save();
+    slog('info', 'detached the video', 'the cuts and notes are untouched');
+  }
+  paintAudioTag(); ytPaint(); updatePos();
+}
+
+function ytPaint() {
+  const dock = $('#ytDock'); if (!dock) return;
+  dock.classList.toggle('live', hasYT());
+  $('#ytTitle').textContent = yt.err ? yt.err
+    : hasYT() ? (P.ytTitle || yt.id)
+    : yt.id ? 'loading…' : 'paste a link';
+  const note = $('#ytNote');
+  note.classList.toggle('bad', !!yt.err);
+  if (yt.err) note.textContent = yt.err + ' — try another link, or load a file instead.';
+  else note.textContent = 'The song plays from YouTube. Nothing is loaded, uploaded or stored — only the link travels with the project.';
+  const b = $('#ytBtn'); if (b) b.classList.toggle('on', hasYT());
+}
+
+/* Opening a project should bring its video with it, and opening one
+   without a video should not leave the last one playing underneath. */
+function ytSync() {
+  const want = P.ytId || '';
+  if (want === yt.id && (!want || yt.player)) { ytPaint(); return; }
+  if (!want) return ytDetach(true);
+  $('#ytDock').classList.add('on');
+  ytAttach(want, { silent: true });
+}
+
+function ytOpen() {
+  const dock = $('#ytDock');
+  dock.classList.add('on'); dock.classList.remove('folded');
+  if (!hasYT()) { const u = $('#ytUrl'); if (u) { u.focus(); u.select(); } }
+  ytPaint();
+}
+$('#ytBtn').onclick = () => {
+  const dock = $('#ytDock');
+  if (dock.classList.contains('on') && !dock.classList.contains('folded')) dock.classList.remove('on');
+  else ytOpen();
+};
+$('#ytFold').onclick = () => $('#ytDock').classList.toggle('folded');
+$('#ytOff').onclick = () => { ytDetach(); $('#ytDock').classList.remove('on'); };
+$('#ytGo').onclick = () => {
+  const raw = $('#ytUrl').value;
+  const id = ytIdFrom(raw);
+  if (!id) {
+    yt.err = 'that is not a YouTube link';
+    slog('err', 'not a youtube link', String(raw).slice(0, 80));
+    return ytPaint();
+  }
+  $('#ytUrl').value = '';
+  ytAttach(id);
+};
+$('#ytUrl').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') $('#ytGo').click();
+});
+
 /* ═══ capture ═════════════════════════════════════════ */
 const audio = $('#audio');
 let retakeMode = false;
 
 const hasAudio = () => !!audio.src && !isNaN(audio.duration) && audio.duration > 0;
 
+/* ═══ where the sound comes from ═══════════════════════════════════════
+   The transport does not care. It asks for a clock and presses play; a
+   loaded file and a YouTube video answer the same four questions, so cut
+   jumping, live notes and the playhead never learned there was a choice.
+   Falling through both leaves tap-time, exactly as before. */
+const hasClock = () => hasYT() || hasAudio();
+const srcTime = () => hasYT() ? ytTime() : (hasAudio() ? audio.currentTime : 0);
+function srcPlay(t) {
+  if (hasYT()) {
+    if (t != null) { try { yt.player.seekTo(t, true); } catch (e) {} }
+    try { yt.player.playVideo(); } catch (e) {}
+    return;
+  }
+  if (hasAudio()) { if (t != null) audio.currentTime = t; audio.play().catch(() => {}); }
+}
+function srcPause() {
+  if (hasYT()) { try { yt.player.pauseVideo(); } catch (e) {} }
+  audio.pause();
+}
+function srcSeek(t) {
+  if (hasYT()) { try { yt.player.seekTo(t, true); ytSample(); } catch (e) {} return; }
+  if (hasAudio()) audio.currentTime = t;
+}
+
 function capTime() {
-  if (hasAudio()) return audio.currentTime;
+  if (hasClock()) return srcTime();
   return (performance.now() - recStart) / 1000;
 }
 
@@ -3045,13 +4576,13 @@ function startRec() {
   $('#stage').classList.add('rec');
   $('#idleHint').style.display = 'none';
   $('#liveFoot').style.display = 'flex';
-  if (hasAudio()) { audio.currentTime = 0; audio.play().catch(() => {}); }
+  if (hasClock()) srcPlay(0);
 }
 
 function endRec() {
   if (mode !== 'rec') return;
   const marks = liveMarks.slice().sort((a, b) => a - b);
-  audio.pause();
+  srcPause();
   $('#stage').classList.remove('rec');
   $('#liveFoot').style.display = 'none';
   const compact = isCompact();
@@ -3061,7 +4592,8 @@ function endRec() {
        song-section pass and a drum-break pass can both exist */
     retakeMode = false;
     P.takeNum++;
-    const t = addTimeline(marks, 'Timeline ' + P.timelines.length);
+    const t = addTimeline(marks, 'Timeline ' + (P.timelines.length + 1));   /* counted before the push */
+    recKind = 'timeline'; recTL = t;
     recalc(); playPos = 0; lastPos = 0;
     if (!compact) { fit(); render(); }
     save();
@@ -3087,6 +4619,52 @@ $('#finishTap').onclick = endRec;
 $('#undoTap').onclick = () => {
   if (liveMarks.length > 1) { liveMarks.pop(); $('#markCount').textContent = liveMarks.length; }
 };
+
+/* What the last capture produced, so the hand-over screen knows whether the
+   name box is naming a project or the timeline that just went into one. */
+let recKind = 'project', recTL = null;
+
+/* On a phone there is no editor, so "+ Timeline" — the only way to record a
+   second pass — was on a screen that device never shows. This is that door:
+   a new project, or the cuts you are about to tap going into one you already
+   have. On anything with an editor, New breakdown still goes straight in. */
+function openPick() {
+  const list = $('#pkList');
+  list.innerHTML = '';
+  const scenes = visibleScenes()
+    .filter(s => ((s.data || {}).markers || []).length)
+    .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  if (!scenes.length) {
+    const e = el('div', 'pk-none');
+    e.textContent = 'Nothing to add to yet — record a project first.';
+    list.appendChild(e);
+  }
+  scenes.forEach(sc => {
+    const st = statsOf(sc.data);
+    const b = el('button', 'pk-item');
+    const main = el('div', 'pk-main');
+    const nm = el('b'); nm.textContent = sc.name || 'Untitled';
+    const meta = el('span');
+    meta.textContent = st.lanes + (st.lanes === 1 ? ' timeline' : ' timelines') + ' · ' + st.cuts + ' cuts · ' + fmtWhen(sc.updated || Date.now());
+    main.append(nm, meta);
+    const add = el('span', 'pk-add'); add.textContent = '+';
+    b.append(main, add);
+    b.onclick = () => startRetakeOn(sc.id);
+    list.appendChild(b);
+  });
+  $('#pick').classList.add('on');
+}
+const closePick = () => $('#pick').classList.remove('on');
+$('#pkBack').onclick = () => { closePick(); go('home'); };
+$('#pkNew').onclick = () => { closePick(); recKind = 'project'; freshScene(); };
+
+function startRetakeOn(id) {
+  const sc = lib.scenes.find(s => s.id === id && !s.deleted);
+  if (!sc) return toast('That project is no longer here');
+  closePick();
+  loadScene(sc);
+  startRetake();
+}
 
 function startRetake() {
   stopPlay();
@@ -3138,6 +4716,8 @@ function migrate(o) {
   /* hand back the SAME array the active timeline holds, so Object.assign(P, …)
      leaves P.markers and P.timelines[activeTL].marks pointing at one object */
   o.markers = o.timelines[o.activeTL].marks;
+  if (typeof o.ytId !== 'string') o.ytId = '';
+  if (typeof o.ytTitle !== 'string') o.ytTitle = '';
   return o;
 }
 migrate(P);
@@ -3176,7 +4756,12 @@ function addTrack(name, L) {
   save();
   logHist(lib.current, 'Added track "' + nm + '"');
 }
-$('#addTrack').onclick = () => { addTrack(); render(); };
+$('#addTrack').onclick = () => {
+  addTrack(); render();
+  /* the pill row is built from the layer's tracks, so it goes stale the
+     moment one is added while live notes are open */
+  if (noteOpen) paintNote();
+};
 $('#newLayer').onclick = () => {
   const src = curLayer();
   const tracks = src.tracks.map(T => ({ id: uid(), key: T.key || T.id, name: T.name, color: T.color, vibe: T.vibe, blocks: [] }));
@@ -3202,9 +4787,14 @@ function segAt(t) {
   for (const sg of L) if (t >= sg[0] && t < sg[1]) return sg;
   return L[L.length - 1];
 }
+/* How long is the song? When something is actually playing it, it knows —
+   and that has to win, or the timeline stops at the last cut and the rest
+   of the track is unreachable. Without a source the last cut is still all
+   we have to go on, which is what tap-time has always done. */
+const mediaDuration = () => hasYT() ? (yt.dur || 0) : (hasAudio() ? audio.duration : 0);
 function recalc() {
   const last = P.markers.length ? P.markers[P.markers.length - 1] : 0;
-  P.duration = Math.max(last, 4);
+  P.duration = Math.max(last, mediaDuration(), 4);
 }
 function snap(t) {
   let best = t, d = 12 / pps();
@@ -3267,8 +4857,29 @@ function renderTLStrip() {
     const tag = el('u'); tag.textContent = t.name; row.appendChild(tag);
     t.marks.forEach(m => { const tick = el('i'); tick.style.left = t2x(m) + 'px'; row.appendChild(tick); });
     row.onclick = () => { if (i !== P.activeTL) { setActiveTL(i); recalc(); render(); save(); } };
+    /* you can record a timeline from a phone now, so there had to be a way
+       to get rid of one. Never the last: a project is its cuts. */
+    if (P.timelines.length > 1) {
+      const x = el('span', 'tl-x'); x.textContent = '\u00d7';
+      x.title = 'Delete "' + t.name + '"';
+      x.onclick = e => {
+        e.stopPropagation();
+        if (!confirm('Delete the timeline "' + t.name + '" and its ' + t.marks.length + ' cuts?')) return;
+        pushUndo('timeline');
+        P.timelines.splice(i, 1);
+        setActiveTL(Math.min(P.activeTL, P.timelines.length - 1));
+        recalc(); render(); save();
+        logHist(lib.current, 'Removed timeline "' + t.name + '"');
+        toast('deleted "' + t.name + '" — undo with cmd+z');
+      };
+      row.appendChild(x);
+    }
     box.appendChild(row);
   });
+  /* match the side column to it, so heads and lanes line up whatever the
+     number of timelines */
+  const sp = $('#sideStrip');
+  if (sp) sp.style.height = Math.max(0, box.offsetHeight - 1) + 'px';
 }
 function renderLayerBar() {
   const c = $('#chips'); c.innerHTML = '';
@@ -3285,8 +4896,27 @@ function renderLayerBar() {
       inp.onclick = e => e.stopPropagation();
       chip.appendChild(inp);
       if (P.layers.length > 1) {
-        const x = el('span', 'x'); x.textContent = '×'; x.title = 'Delete layer';
-        x.onclick = e => { e.stopPropagation(); const nm = L.name; P.layers.splice(i, 1); P.active = clamp(P.active, 0, P.layers.length - 1); render(); save(); logHist(lib.current, 'Removed layer "' + nm + '"'); };
+        const x = el('span', 'x'); x.textContent = '×';
+        x.title = 'Delete the layer "' + L.name + '" and its notes';
+        x.onclick = function (e) {
+          e.stopPropagation();
+          /* a layer holds every note written into it — one stray click should
+             not be able to take all of them, so say what is at stake first */
+          const n = L.tracks.reduce((a, T) => a + (T.blocks || []).length, 0);
+          if (n && !this._armed) {
+            this._armed = true; this.style.color = 'var(--play)';
+            toast('delete "' + L.name + '" and ' + n + (n === 1 ? ' note' : ' notes') + '? tap × again');
+            setTimeout(() => { this._armed = false; this.style.color = ''; }, 2800);
+            return;
+          }
+          pushUndo('a layer');
+          const nm = L.name;
+          P.layers.splice(i, 1);
+          P.active = clamp(P.active, 0, P.layers.length - 1);
+          render(); save();
+          logHist(lib.current, 'Removed layer "' + nm + '"');
+          toast('deleted "' + nm + '" — undo with cmd+z');
+        };
         chip.appendChild(x);
       }
     } else {
@@ -3388,6 +5018,31 @@ function render() {
       const tag = el('span'); tag.textContent = String(list.length);
       tag.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--dim)';
       h.append(sw, inp, tag);
+      /* Overlay rows had no delete at all, and `overlay` is saved with the
+         project — so anything left in that view reopened looking as though
+         its tracks could never be removed. The row is one track seen across
+         several layers, so deleting it means all of them; say how many. */
+      const mx = el('button', 'x'); mx.textContent = '\u00d7';
+      const inLayers = P.layers.filter(L => L.vis !== false && L.tracks.some(T => tkey(T) === r.key));
+      mx.title = 'Delete "' + r.name + '" from every layer showing it';
+      mx.onclick = function (e) {
+        e.stopPropagation();
+        const notes = inLayers.reduce((a, L) =>
+          a + L.tracks.filter(T => tkey(T) === r.key).reduce((m, T) => m + (T.blocks || []).length, 0), 0);
+        if (!this._armed) {
+          this._armed = true; this.style.color = 'var(--play)';
+          toast('delete ' + r.name + ' from ' + inLayers.length + (inLayers.length === 1 ? ' layer' : ' layers')
+            + (notes ? ' and ' + notes + (notes === 1 ? ' note' : ' notes') : '') + '? tap × again');
+          setTimeout(() => { this._armed = false; this.style.color = ''; }, 2800);
+          return;
+        }
+        pushUndo('a track');
+        inLayers.forEach(L => { L.tracks = L.tracks.filter(T => tkey(T) !== r.key); });
+        render(); save();
+        logHist(lib.current, 'Removed track "' + r.name + '" from ' + inLayers.length + ' layers');
+        toast('deleted "' + r.name + '" — undo with cmd+z');
+      };
+      h.appendChild(mx);
     } else {
       sw.title = 'Change colour';
       sw.onclick = () => { const c = PALETTE[(PALETTE.indexOf(r.T.color) + 1) % PALETTE.length]; P.layers.forEach(L => L.tracks.forEach(T => { if (tkey(T) === r.key) T.color = c; })); render(); save(); };
@@ -3749,6 +5404,9 @@ addEventListener('drop', async e => {
 });
 
 async function loadAudio(f) {
+  /* a real file wins: it has a waveform, and two sources would fight over
+     the transport and the clock */
+  if (yt.id) { ytDetach(); $('#ytDock').classList.remove('on'); }
   audio.src = URL.createObjectURL(f);
   P.audioName = f.name;
   const sc0 = curScene();
@@ -3824,31 +5482,36 @@ $('#nextCut').onclick = () => {
 function togglePlay() {
   playing ? stopPlay() : startPlay();
 }
-function startPlay() {
+/* `fromSource` means the player itself started or stopped — reflect it,
+   but do not command it back or the two bounce off each other. */
+function startPlay(fromSource) {
   setPh(false);
   if (playPos >= P.duration - .05) playPos = 0;
-  if (hasAudio()) { audio.currentTime = playPos; audio.play().catch(() => {}); }
+  if (!fromSource && hasClock()) srcPlay(playPos);
   playing = true; lastPos = playPos;
   $('#playBtn').textContent = '❚❚'; $('#playBtn').classList.add('on');
   $('#playhead').classList.add('run');
+  paintLive();
 }
-function stopPlay() {
-  playing = false; audio.pause();
+function stopPlay(fromSource) {
+  playing = false;
+  if (fromSource) audio.pause(); else srcPause();
   if (!noteOpen) $('#seghi').classList.remove('on');
   $('#playBtn').textContent = '▶'; $('#playBtn').classList.remove('on');
   $('#playhead').classList.remove('run');
+  paintLive();
 }
 function seek(t) {
   setPh(false);
   playPos = clamp(t, 0, P.duration); lastPos = playPos;
-  if (hasAudio()) audio.currentTime = playPos;
+  if (hasClock()) srcSeek(playPos);
   updatePos();
 }
 
 /* called every frame while the editor is up */
 function advance(dt) {
   if (playing) {
-    playPos = hasAudio() ? audio.currentTime : playPos + dt;
+    playPos = hasClock() ? srcTime() : playPos + dt;
     if (playPos >= P.duration) { playPos = P.duration; stopPlay(); }
 
     /* every cut the playhead crosses sends a ripple through the background */
@@ -3885,6 +5548,8 @@ function advance(dt) {
 
 function paintAudioTag() {
   const tag = $('#audioName'); if (!tag) return;
+  /* a video is carrying the sound — the file prompt would only confuse */
+  if (hasYT()) { tag.className = ''; tag.textContent = ''; return; }
   if (hasAudio()) { tag.className = ''; tag.textContent = P.audioName || ''; return; }
   if (P.audioName) { tag.className = 'need'; tag.textContent = '↑ load ' + P.audioName; }
   else { tag.className = ''; tag.textContent = ''; }
@@ -3895,7 +5560,7 @@ function updatePos() {
   const ph = $('#playhead');
   if (ph) ph.style.left = t2x(playPos) + 'px';
   growNote();
-  $('#posLabel').textContent = fmt(playPos) + ' / ' + fmt(P.duration) + (hasAudio() ? '' : ' · tap-time');
+  $('#posLabel').textContent = fmt(playPos) + ' / ' + fmt(P.duration) + (hasClock() ? '' : ' · tap-time');
   for (const e of blockIndex) {
     const on = playing && playPos >= e.s && playPos < e.e;
     if (on !== e.on) { e.on = on; e.el.classList.toggle('live', on); }
@@ -4030,6 +5695,14 @@ function setLive(on) {
   document.body.classList.toggle('live', on);
   if (on) { openNote(''); if (!playing) startPlay(); }
   else { closeNote(); if (playing) stopPlay(); }
+  paintLive();
+}
+/* Live notes ride on the playhead, so they are only live while the song is
+   moving — and now that the song may be a video someone can pause in the
+   player itself, that can stop without the app being asked. Pausing holds
+   the note where it is rather than throwing it away; playing carries on. */
+function paintLive() {
+  document.body.classList.toggle('live-paused', liveMode && !playing);
 }
 $('#liveBtn').onclick = () => setLive(!liveMode);
 $('#nbSnap').onclick = () => {
@@ -4067,6 +5740,9 @@ $('#nbTab').addEventListener('click', () => armStep(1));
 
 /* ═══ keys ════════════════════════════════════════════ */
 addEventListener('keydown', e => {
+  /* the login gate is not something a stray keystroke should get you past,
+     or navigate around behind */
+  if ($('#auth').classList.contains('on')) return;
   const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
   if (e.key === 'Escape') {
     if ($('#pair').classList.contains('on')) { $('#pair').classList.remove('on'); return; }
@@ -4217,6 +5893,146 @@ $('#mCsv').onclick = () => {
   a.click();
   toast('csv saved — opens in excel or sheets');
 };
+
+const ALS_B64 = "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";
+
+async function decompressGzip(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  
+  const ds = new DecompressionStream('gzip');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  
+  const res = new Response(ds.readable);
+  return await res.text();
+}
+
+async function compressGzip(str) {
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  writer.write(new TextEncoder().encode(str));
+  writer.close();
+  
+  const res = new Response(cs.readable);
+  const blob = await res.blob();
+  return blob;
+}
+
+$('#mMidi').onclick = async () => {
+  try {
+    const xml = await decompressGzip(ALS_B64);
+    
+    const getTag = (tag, text) => {
+      const m = text.match(new RegExp('<' + tag + '\\s[^>]*>[\\s\\S]*?</' + tag + '>'));
+      return m ? m[0] : '';
+    };
+
+    const trkTmpl = getTag('MidiTrack', xml);
+    const locTmpl = getTag('Locator', xml);
+    const clipTmpl = getTag('MidiClip', trkTmpl);
+
+    let nextId = 50000;
+    const reassignIds = (frag) => {
+      return frag.replace(/Id="(\d+)"/g, (m, val) => {
+        if (parseInt(val, 10) > 100) {
+          nextId++;
+          return 'Id="' + nextId + '"';
+        }
+        return m;
+      });
+    };
+
+    const escapeXml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const makeLocator = (id, time, name) => {
+      let s = locTmpl.replace('Id="3"', 'Id="' + id + '"');
+      s = s.replace(/<Time Value="[^"]*"\/>/, '<Time Value="' + time + '"/>');
+      s = s.replace('<Name Value="testing"/>', '<Name Value="' + escapeXml(name) + '"/>');
+      return s;
+    };
+
+    const makeClip = (name, start, end) => {
+      nextId++;
+      let s = clipTmpl.replace('Id="5"', 'Id="' + nextId + '"');
+      s = s.replace(/Time="[^"]+"/, 'Time="' + start + '"');
+      s = s.replace(/<CurrentStart Value="[^"]*"\/>/, '<CurrentStart Value="' + start + '"/>');
+      s = s.replace(/<CurrentEnd Value="[^"]*"\/>/, '<CurrentEnd Value="' + end + '"/>');
+      s = s.replace('<Name Value="myclip"/>', '<Name Value="' + escapeXml(name) + '"/>');
+      s = s.replace(/<LoopStart Value="[^"]*"\/>/, '<LoopStart Value="' + start + '"/>');
+      s = s.replace(/<LoopEnd Value="[^"]*"\/>/, '<LoopEnd Value="' + end + '"/>');
+      s = s.replace(/<OutMarker Value="[^"]*"\/>/, '<OutMarker Value="' + end + '"/>');
+      s = s.replace(/<HiddenLoopStart Value="[^"]*"\/>/, '<HiddenLoopStart Value="' + start + '"/>');
+      s = s.replace(/<HiddenLoopEnd Value="[^"]*"\/>/, '<HiddenLoopEnd Value="' + end + '"/>');
+      const dur = end - start;
+      s = s.replace(/<MidiNoteEvent Time="[^"]*" Duration="[^"]*"/, '<MidiNoteEvent Time="0" Duration="' + dur + '"');
+      return reassignIds(s);
+    };
+
+    const makeTrack = (name, clips) => {
+      nextId++;
+      let s = trkTmpl.replace('Id="15"', 'Id="' + nextId + '"');
+      s = s.replace('<EffectiveName Value="layer 1"/>', '<EffectiveName Value="' + escapeXml(name) + '"/>');
+      s = s.replace('<UserName Value="layer 1"/>', '<UserName Value="' + escapeXml(name) + '"/>');
+      s = s.replace(/<Events>[\s\S]*?<\/Events>/, '<Events>\n' + clips.join('\n') + '\n</Events>');
+      return reassignIds(s);
+    };
+
+    const TL = curTL();
+    const cuts = TL.cuts && TL.cuts.length ? TL.cuts : (TL.marks || []).map((m, i) => ({ t: m, label: 'Cut ' + String(i+1).padStart(2, '0') }));
+    const locs = cuts.map((c, i) => {
+      const beat = (c.t || 0) * 2.0;
+      const name = c.label || ('Cut ' + String(i + 1).padStart(2, '0'));
+      return makeLocator(1000 + i, beat.toFixed(4), name);
+    });
+    const locsXml = '<Locators>\n<Locators>\n' + locs.join('\n') + '\n</Locators>\n</Locators>';
+
+    const trackXmls = [];
+    P.layers.forEach(L => {
+      L.tracks.forEach(T => {
+        const blks = T.blocks.filter(k => k.tl ? k.tl === TL.id : TL === P.timelines[0]);
+        if (!blks.length) return;
+        const clips = blks.map(b => {
+          const sBeat = (b.s || 0) * 2.0;
+          const eBeat = (b.e || 0) * 2.0;
+          return makeClip(b.text || 'Section', sBeat.toFixed(4), eBeat.toFixed(4));
+        });
+        const trkName = (P.layers.length > 1 ? L.name + ' - ' : '') + T.name;
+        trackXmls.push(makeTrack(trkName, clips));
+      });
+    });
+
+    const retStart = xml.indexOf('<ReturnTrack');
+    const tEnd = xml.indexOf('</Tracks>');
+    const returnTracksSuffix = xml.substring(retStart, tEnd);
+    const tracksXml = '<Tracks>\n' + trackXmls.join('\n') + '\n' + returnTracksSuffix + '\n</Tracks>';
+
+    const tStart = xml.indexOf('<Tracks>');
+    const tEndFull = tEnd + '</Tracks>'.length;
+    let xmlOut = xml.substring(0, tStart) + tracksXml + xml.substring(tEndFull);
+
+    const lStart = xmlOut.indexOf('<Locators>');
+    const lEnd = xmlOut.indexOf('</Locators>', xmlOut.indexOf('</Locators>', lStart) + 1) + '</Locators>'.length;
+    xmlOut = xmlOut.substring(0, lStart) + locsXml + xmlOut.substring(lEnd);
+
+    xmlOut = xmlOut.replace(/<NextPointeeId Value="[^"]*"\/>/, '<NextPointeeId Value="' + (nextId + 1000) + '"/>');
+
+    const blob = await compressGzip(xmlOut);
+    const a = el('a');
+    a.href = URL.createObjectURL(blob);
+    const sc = curScene();
+    a.download = ((sc && sc.name) || 'breakdown').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '-template.als';
+    a.click();
+    toast('Ableton (.als) template saved');
+    $('#menu').classList.remove('open');
+  } catch (err) {
+    console.error(err);
+    toast('Error generating ALS file');
+  }
+};
+
 $('#mReset').onclick = () => { stopPlay(); if (liveMode) setLive(false); freshScene(); };
 
 /* ═══ boot ════════════════════════════════════════════ */
@@ -4269,6 +6085,13 @@ addEventListener('resize', syncTopbar);
 
   hist = (await store.get(HISTKEY)) || {};
 
+  /* Which build is this? The deploy with the accounts backend answers /api;
+     a plain static copy does not, and keeps the endpoint-address flow exactly
+     as it was. The last answer is remembered so a return visit puts the right
+     front door up immediately rather than flashing the wrong one. */
+  const expectCloud = cloudHint();
+  if (expectCloud) { document.body.classList.add('cloud'); paintAuthMode(); openAuth(); }
+
   const cfg = await store.get(SKEY);
   if (cfg) { srv.url = cfg.url || ''; srv.on = !!cfg.on && !!cfg.url; $('#dpId').value = srv.url; }
   /* Sync used to run through a Google Apps Script deployment. That address
@@ -4284,12 +6107,14 @@ addEventListener('resize', syncTopbar);
         'the old ' + String(old.url).slice(0, 48) + '… no longer applies — connect your endpoint address to sync again');
     }
   }
-  const paired = consumePairHash();
+  /* a pairing link carries an endpoint address and its key; it means nothing
+     to the account build, where signing in is what connects a device */
+  const paired = expectCloud ? false : consumePairHash();
   $('#dpId').value = srv.url;
   paintKind();
   paintSync();
   if (paired) toast('paired — pull to get your breakdowns');
-  else if (fromDrive) toast('sync now runs on MongoDB — reconnect in projects');
+  else if (fromDrive && !expectCloud) toast('sync now runs on MongoDB — reconnect in projects');
   go('home');
   maybeSnapshot();
   /* No network on boot any more: startup is instant and offline-identical,
@@ -4298,7 +6123,9 @@ addEventListener('resize', syncTopbar);
   tidyBlank();
   if (screen === 'home') paintHome();
   paintInboxBadges();
-  slog('info', 'ready', srv.on ? 'sync connected · pull/push is manual' : 'sync not connected · local only');
+  /* the one network call at boot, and only to find out which build this is —
+     cloudBoot logs "ready" for whichever answer comes back */
+  cloudBoot();
 })();
 </script>
 </body>
