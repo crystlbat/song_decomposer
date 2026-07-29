@@ -2313,13 +2313,20 @@ function paintSend() {
       : cloud.err ? cloud.err
       : dirty ? 'saving…'
       : cloud.last ? 'saved ' + fmtWhen(cloud.last) : 'saved';
-    if (cloud.user && !cloud.err && !dirty) st.className = 'sd-state ok';
+    if (cloud.user && !cloud.err && !dirty) {
+      st.className = 'sd-state ok';
+      btn.style.display = 'none';
+    }
     return;
   }
   btn.textContent = srv.on ? 'Send' : 'Connect sync to send';
   st.textContent = srv.on
     ? (dirty ? 'not sent yet' : (srv.last ? 'last sent ' + fmtWhen(srv.last) : ''))
     : 'saved on this device';
+  if (srv.on && !dirty && srv.last) {
+    btn.style.display = 'none';
+    st.className = 'sd-state ok';
+  }
 }
 $('#sdName').addEventListener('input', () => {
   const sc = curScene(); if (!sc) return;
