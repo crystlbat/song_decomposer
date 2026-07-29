@@ -2266,8 +2266,13 @@ function paintSend(isSyncRefresh = false) {
   }
   $('#sdName').placeholder = tl ? 'name this timeline…' : 'name this one…';
   $('#sdInto').textContent = tl && sc ? 'going into ' + sc.name : '';
+  const acts = document.querySelector('#send .sd-acts');
+  if (acts) acts.style.display = tl ? 'flex' : 'none';
   const eb = $('#send .eyebrow');
-  if (eb) eb.textContent = tl ? '02 — name this timeline' : '02 — hand it over';
+  if (eb) {
+    eb.textContent = tl ? '02 — name this timeline' : '02 — hand it over';
+    eb.style.display = tl ? 'block' : 'none';
+  }
   const btn = $('#sdSend');
   btn.style.display = 'block';
   btn.disabled = !cuts;
@@ -2276,32 +2281,38 @@ function paintSend(isSyncRefresh = false) {
   
   const tlsBox = $('#sdTLs');
   if (tlsBox) {
-    tlsBox.innerHTML = '';
     if (P.timelines && P.timelines.length > 0) {
       tlsBox.style.display = 'flex';
-      P.timelines.forEach((t, i) => {
-        const on = i === P.activeTL;
-        const item = el('div', 'sd-tl-item' + (on ? ' on' : ''));
-        item.style.setProperty('--c', t.color);
-        
-        const head = el('div', 'sd-tl-head');
-        const nm = el('span'); nm.textContent = t.name;
-        const cnt = el('b'); cnt.textContent = t.marks.length + ' cuts';
-        head.append(nm, cnt);
-        item.appendChild(head);
-        
-        const spark = el('div', 'sd-tl-spark');
-        const dur = P.duration || 1;
-        t.marks.forEach(m => {
-          const b = el('i');
-          b.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
-          spark.appendChild(b);
+      if (tlsBox.children.length === P.timelines.length) {
+        Array.from(tlsBox.children).forEach((item, i) => {
+          item.className = 'sd-tl-item' + (i === P.activeTL ? ' on' : '');
         });
-        item.appendChild(spark);
-        
-        item.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
-        tlsBox.appendChild(item);
-      });
+      } else {
+        tlsBox.innerHTML = '';
+        P.timelines.forEach((t, i) => {
+          const on = i === P.activeTL;
+          const item = el('div', 'sd-tl-item' + (on ? ' on' : ''));
+          item.style.setProperty('--c', t.color);
+          
+          const head = el('div', 'sd-tl-head');
+          const nm = el('span'); nm.textContent = t.name;
+          const cnt = el('b'); cnt.textContent = t.marks.length + ' cuts';
+          head.append(nm, cnt);
+          item.appendChild(head);
+          
+          const spark = el('div', 'sd-tl-spark');
+          const dur = P.duration || 1;
+          t.marks.forEach(m => {
+            const b = el('i');
+            b.style.left = (clamp(m / dur, 0, 1) * 100) + '%';
+            spark.appendChild(b);
+          });
+          item.appendChild(spark);
+          
+          item.onclick = () => { setActiveTL(i); recalc(); save(); paintSend(); };
+          tlsBox.appendChild(item);
+        });
+      }
     } else {
       tlsBox.style.display = 'none';
     }
