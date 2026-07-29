@@ -2251,7 +2251,8 @@ async function checkOnOpen(force) {
   setTimeout(() => { if (screen === 'library') paintLibCheck(''); }, 4000);
 }
 
-function paintSend() {
+function paintSend(isSyncRefresh = false) {
+  if (isSyncRefresh && $('#send').classList.contains('done')) return;
   $('#send').classList.remove('done');
   const cuts = (P.markers || []).length;
   $('#sdCount').textContent = cuts;
@@ -2259,7 +2260,10 @@ function paintSend() {
   const sc = curScene();
   const tl = recKind === 'timeline' && recTL;
   document.body.classList.toggle('into-tl', !!tl);
-  $('#sdName').value = tl ? recTL.name : (sc ? sc.name : '');
+  const expectedName = tl ? recTL.name : (sc ? sc.name : '');
+  if (document.activeElement !== $('#sdName')) {
+    $('#sdName').value = expectedName;
+  }
   $('#sdName').placeholder = tl ? 'name this timeline…' : 'name this one…';
   $('#sdInto').textContent = tl && sc ? 'going into ' + sc.name : '';
   const eb = $('#send .eyebrow');
@@ -3308,6 +3312,7 @@ function paintSync(err) {
   if (srv.on && !e) st.textContent += dirty ? ' · local changes not pushed' : ' · manual — nothing syncs on its own';
   const hs = $('#hStore'); if (hs) hs.textContent = (isAdmin() && srv.on) ? 'synced with your database when you ask' : 'stored on this device';
   paintInboxBadges();
+  if (typeof screen !== 'undefined' && screen === 'send') paintSend(true);
 }
 function openSync() { closeSyncPop(); $('#sync').classList.add('on'); paintSync(); }
 function closeSync() { $('#sync').classList.remove('on'); }
@@ -3758,6 +3763,7 @@ function paintCloud() {
     : cloud.local ? 'stored on this device' : 'sign in to save your work';
   if ($('#syncPop').classList.contains('on')) paintSyncPop();
   paintInboxBadges();
+  if (typeof screen !== 'undefined' && screen === 'send') paintSend(true);
 }
 
 async function cloudBoot() {
