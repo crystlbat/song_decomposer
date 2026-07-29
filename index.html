@@ -5994,13 +5994,32 @@ $('#mMidi').onclick = async () => {
       L.tracks.forEach(T => {
         const blks = T.blocks.filter(k => k.tl ? k.tl === TL.id : TL === P.timelines[0]);
         if (!blks.length) return;
-        const clips = blks.map(b => {
-          const sBeat = (b.s || 0) * 2.0;
-          const eBeat = (b.e || 0) * 2.0;
-          return makeClip(b.text || 'Section', sBeat.toFixed(4), eBeat.toFixed(4));
+
+        // Partition overlapping blocks into separate lanes so Ableton receives non-overlapping arrangement tracks
+        const lanes = [];
+        blks.forEach(b => {
+          let placed = false;
+          for (const lane of lanes) {
+            const overlap = lane.some(existing => (b.s < (existing.e - 0.001) && b.e > (existing.s + 0.001)));
+            if (!overlap) {
+              lane.push(b);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) lanes.push([b]);
         });
-        const trkName = (P.layers.length > 1 ? L.name + ' - ' : '') + T.name;
-        trackXmls.push(makeTrack(trkName, clips));
+
+        lanes.forEach((laneBlks, laneIdx) => {
+          const clips = laneBlks.map(b => {
+            const sBeat = (b.s || 0) * 2.0;
+            const eBeat = (b.e || 0) * 2.0;
+            return makeClip(b.text || 'Section', sBeat.toFixed(4), eBeat.toFixed(4));
+          });
+          const baseName = (P.layers.length > 1 ? L.name + ' - ' : '') + T.name;
+          const trkName = lanes.length > 1 ? baseName + ' (' + (laneIdx + 1) + ')' : baseName;
+          trackXmls.push(makeTrack(trkName, clips));
+        });
       });
     });
 
@@ -6017,7 +6036,7 @@ $('#mMidi').onclick = async () => {
     const lEnd = xmlOut.indexOf('</Locators>', xmlOut.indexOf('</Locators>', lStart) + 1) + '</Locators>'.length;
     xmlOut = xmlOut.substring(0, lStart) + locsXml + xmlOut.substring(lEnd);
 
-    xmlOut = xmlOut.replace(/<NextPointeeId Value="[^"]*"\/>/, '<NextPointeeId Value="' + (nextId + 1000) + '"/>');
+    xmlOut = xmlOut.replace(/<NextPointeeId Value="[^"]*"\s*\/>/, '<NextPointeeId Value="' + (nextId + 1000) + '"/>');
 
     const blob = await compressGzip(xmlOut);
     const a = el('a');
